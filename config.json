@@ -1,0 +1,12 @@
+{
+	"description": "Sumo Logic logging driver",
+	"documentation": "<insert link here>",
+	"entrypoint": ["/usr/bin/docker-logging-driver"],
+	"network": {
+		"type": "host"
+  },
+	"interface": {
+		"types": ["docker.logdriver/1.0"],
+		"socket": "sumo-log-driver.sock"
+	}
+}
