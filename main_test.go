@@ -14,7 +14,7 @@ import (
 )
 
 const (
-  fileString = "/run/docker/logging/b227f9375aee6474f9195fc53710159e7afbc2af872d6287380dfbffb0a2e224"
+  filePathRequestField = "/tmp/test"
 )
 
 type mockSumoDriver struct {
@@ -49,7 +49,7 @@ func TestHandlers(t *testing.T) {
   t.Run("make StartLogging request with missing ContainerID", func(t *testing.T) {
     defer resetCallsCount(mockSumoDriver)
     req := StartLoggingRequest{
-      File: fileString,
+      File: filePathRequestField,
       Info: logger.Info{
         Config: map[string]string{
           logOptUrl: "https://example.org",
@@ -70,7 +70,7 @@ func TestHandlers(t *testing.T) {
   t.Run(fmt.Sprintf("make StartLogging request with missing log-opt: %s", logOptUrl), func(t *testing.T) {
     defer resetCallsCount(mockSumoDriver)
     req := StartLoggingRequest{
-      File: fileString,
+      File: filePathRequestField,
       Info: logger.Info{
         Config: map[string]string{},
         ContainerID: "containeriid",
@@ -90,7 +90,7 @@ func TestHandlers(t *testing.T) {
   t.Run("make StartLogging request with correct config", func(t *testing.T) {
     defer resetCallsCount(mockSumoDriver)
     req := StartLoggingRequest{
-      File: fileString,
+      File: filePathRequestField,
       Info: logger.Info{
         Config: map[string]string{
           logOptUrl: "https://example.org",
@@ -112,7 +112,7 @@ func TestHandlers(t *testing.T) {
   t.Run("make StopLogging request", func(t *testing.T) {
     defer resetCallsCount(mockSumoDriver)
     req := StopLoggingRequest{
-      File: fileString,
+      File: filePathRequestField,
     }
     resp, respBody, err := makeRequest(stopLoggingPath, req, mockServer)
     if err != nil {
@@ -123,7 +123,6 @@ func TestHandlers(t *testing.T) {
     assert.Equal(t, 1, mockSumoDriver.StopLoggingCallsCount, "should have called StopLogging on the driver exactly once")
     assert.Equal(t, "", respBody.Err, "error message should be empty")
   })
-
 }
 
 func resetCallsCount(m *mockSumoDriver) {
