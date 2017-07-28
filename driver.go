@@ -2,12 +2,14 @@ package main
 
 import (
   "bytes"
+	"compress/gzip"
   "context"
   "encoding/binary"
   "fmt"
   "io"
   "io/ioutil"
   "net/http"
+  "strconv"
   "sync"
   "syscall"
   "time"
@@ -24,6 +26,9 @@ const (
   defaultFrequency  = 2 * time.Second
 	defaultStreamSize = 4000
 	defaultBatchSize = 1000
+
+  logOptGzipCompression = "sumo-compress"
+  logOptGzipCompressionLevel = "sumo-compress-level"
 )
 
 type SumoDriver interface {
@@ -43,11 +48,15 @@ type HttpClient interface {
 type sumoLogger struct {
   httpSourceUrl string
   client HttpClient
+
   fifoLogStream io.ReadWriteCloser
   logStream chan *sumoLog
+
+  gzipCompression bool
+  gzipCompressionLevel int
+
   frequency time.Duration
   batchSize int
-  closed bool
 }
 
 type sumoLog struct {
@@ -82,8 +91,31 @@ func (sumoDriver *sumoDriver) startLogging(file string, info logger.Info) (*sumo
   sumoDriver.mu.Unlock()
 
   fifoLogStream, err := fifo.OpenFifo(context.Background(), file, syscall.O_RDONLY, 0700)
-	if err != nil {
-		return nil, errors.Wrapf(err, "error opening logger fifo: %q", file)
+  if err != nil {
+    return nil, errors.Wrapf(err, "error opening logger fifo: %q", file)
+  }
+
+  gzipCompression := false
+	if gzipCompressionStr, exists := info.Config[logOptGzipCompression]; exists {
+		gzipCompression, err = strconv.ParseBool(gzipCompressionStr)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	gzipCompressionLevel := gzip.DefaultCompression
+	if gzipCompressionLevelStr, exists := info.Config[logOptGzipCompressionLevel]; exists {
+		var err error
+		gzipCompressionLevel64, err := strconv.ParseInt(gzipCompressionLevelStr, 10, 32)
+		if err != nil {
+			return nil, err
+		}
+		gzipCompressionLevel = int(gzipCompressionLevel64)
+		if gzipCompressionLevel < gzip.DefaultCompression || gzipCompressionLevel > gzip.BestCompression {
+			err := fmt.Errorf("Not supported level '%s' for %s (supported values between %d and %d).",
+				gzipCompressionLevelStr, logOptGzipCompressionLevel, gzip.DefaultCompression, gzip.BestCompression)
+			return nil, err
+		}
 	}
 
   // TODO: make options configurable through logOpts
@@ -96,6 +128,8 @@ func (sumoDriver *sumoDriver) startLogging(file string, info logger.Info) (*sumo
     client: &http.Client{},
     fifoLogStream: fifoLogStream,
     logStream: make(chan *sumoLog, streamSize),
+    gzipCompression: gzipCompression,
+    gzipCompressionLevel: gzipCompressionLevel,
     frequency: frequency,
     batchSize: batchSize,
   }
@@ -111,7 +145,6 @@ func (sumoDriver *sumoDriver) StopLogging(file string) error {
 	sumoDriver.mu.Lock()
 	sumoLogger, exists := sumoDriver.loggers[file]
 	if exists {
-    sumoLogger.closed = true
 		sumoLogger.fifoLogStream.Close()
 		delete(sumoDriver.loggers, file)
 	}
@@ -124,9 +157,6 @@ func consumeLogsFromFifo(sumoLogger *sumoLogger) {
   defer dec.Close()
 	var buf logdriver.LogEntry
 	for {
-    if sumoLogger.closed {
-      return
-    }
 		if err := dec.ReadMsg(&buf); err != nil {
 			if err == io.EOF {
 				sumoLogger.fifoLogStream.Close()
@@ -153,14 +183,8 @@ func queueLogsForSending(sumoLogger *sumoLogger) {
   timer := time.NewTicker(sumoLogger.frequency)
   var logs []*sumoLog
   for {
-    if sumoLogger.closed {
-      return
-    }
     select {
     case <-timer.C:
-      if sumoLogger.closed {
-        return
-      }
       logs = sumoLogger.sendLogs(logs)
     case log, open := <-sumoLogger.logStream:
       if !open {
@@ -180,21 +204,50 @@ func (sumoLogger *sumoLogger) sendLogs(logs []*sumoLog) []*sumoLog {
   if logsCount == 0 {
     return logs
   }
+
   var logsBatch bytes.Buffer
-  for _, log := range logs {
-    if _, err := logsBatch.Write(log.Line); err != nil {
+  var writer io.Writer
+  var gzipWriter *gzip.Writer
+  var err error
+
+  if sumoLogger.gzipCompression {
+    gzipWriter, err = gzip.NewWriterLevel(&logsBatch, sumoLogger.gzipCompressionLevel)
+    if err != nil {
       logrus.Error(err)
+      return logs
+    }
+    writer = gzipWriter
+  } else {
+    writer = &logsBatch
+  }
+  for _, log := range logs {
+    if _, err := writer.Write(log.Line); err != nil {
+      logrus.Error(err)
+      return logs
     }
   }
+  if sumoLogger.gzipCompression {
+		err = gzipWriter.Close()
+		if err != nil {
+			logrus.Error(err)
+      return logs
+		}
+	}
 
   // TODO: error handling, retries and exponential backoff
   request, err := http.NewRequest("POST", sumoLogger.httpSourceUrl, bytes.NewBuffer(logsBatch.Bytes()))
   if err != nil {
     logrus.Error(err)
+    return logs
   }
+  if sumoLogger.gzipCompression {
+    request.Header.Add("Content-Encoding", "gzip")
+  }
+
   response, err := sumoLogger.client.Do(request)
   if err != nil {
     logrus.Error(err)
+    return logs
   }
 
   defer response.Body.Close()
@@ -202,6 +255,7 @@ func (sumoLogger *sumoLogger) sendLogs(logs []*sumoLog) []*sumoLog {
     body, err := ioutil.ReadAll(response.Body)
     if err != nil {
       logrus.Error(err)
+      return logs
     }
     logrus.Error(fmt.Errorf("%s: Failed to send event: %s - %s", pluginName, response.Status, body))
     return logs
