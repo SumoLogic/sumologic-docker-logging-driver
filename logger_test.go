@@ -135,7 +135,6 @@ func TestQueueLogsForSending(t *testing.T) {
     time.Sleep(time.Second)
     assert.Equal(t, 0, testClient.requestCount,
       "should have received no requests, fewer messages than batch size (timer should not have clicked in time)")
-    testClient.Reset()
 
     testLogCount := 1000
     for i := 0; i < testLogCount; i++ {
@@ -165,7 +164,6 @@ func TestQueueLogsForSending(t *testing.T) {
     time.Sleep(time.Second)
     assert.Equal(t, 0, testClient.requestCount,
       "should have received no requests, fewer messages than batch size (timer should not have clicked in time)")
-    testClient.Reset()
 
     testLogCount := 1000
     for i := 0; i < testLogCount; i++ {
@@ -194,8 +192,8 @@ func TestSendLogs(t *testing.T) {
       batchSize: defaultBatchSize,
     }
 
-    testLogs = testSumoLogger.sendLogs(testLogs)
-    assert.Equal(t, 0, len(testLogs), "should be no logs in queue")
+    err := testSumoLogger.sendLogs(testLogs)
+    assert.Nil(t, err, "should be no errors sending logs")
     assert.Equal(t, 0, testClient.requestCount, "should have received no requests")
   })
 
@@ -217,8 +215,8 @@ func TestSendLogs(t *testing.T) {
       batchSize: defaultBatchSize,
     }
 
-    testLogs = testSumoLogger.sendLogs(testLogs)
-    assert.Equal(t, 0, len(testLogs), "should be no logs in queue")
+    err := testSumoLogger.sendLogs(testLogs)
+    assert.Nil(t, err, "should be no errors sending logs")
     assert.Equal(t, 1, testClient.requestCount, "should have received one request")
   })
 
@@ -243,8 +241,8 @@ func TestSendLogs(t *testing.T) {
       batchSize: defaultBatchSize,
     }
 
-    testLogs = testSumoLogger.sendLogs(testLogs)
-    assert.Equal(t, 0, len(testLogs), "should be no logs in queue")
+    err := testSumoLogger.sendLogs(testLogs)
+    assert.Nil(t, err, "should be no errors sending logs")
     assert.Equal(t, 1, testClient.requestCount, "should have received one request, logs are batched")
   })
 
@@ -266,8 +264,8 @@ func TestSendLogs(t *testing.T) {
       batchSize: defaultBatchSize,
     }
 
-    testLogs = testSumoLogger.sendLogs(testLogs)
-    assert.Equal(t, 1, len(testLogs), "all logs should be returned to queue")
+    err := testSumoLogger.sendLogs(testLogs)
+    assert.NotNil(t, err, "should be an error sending logs")
     assert.Equal(t, 1, testClient.requestCount, "should have received one request, logs are batched")
   })
 
@@ -292,8 +290,8 @@ func TestSendLogs(t *testing.T) {
       batchSize: defaultBatchSize,
     }
 
-    testLogs = testSumoLogger.sendLogs(testLogs)
-    assert.Equal(t, logCount, len(testLogs), "all logs should be returned to queue")
+    err := testSumoLogger.sendLogs(testLogs)
+    assert.NotNil(t, err, "should be an error sending logs")
     assert.Equal(t, 1, testClient.requestCount, "should have received one request, logs are batched")
   })
 }

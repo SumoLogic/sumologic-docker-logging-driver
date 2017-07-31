@@ -153,50 +153,59 @@ func queueLogsForSending(sumoLogger *sumoLogger) {
   for {
     select {
     case <-timer.C:
-      logs = sumoLogger.sendLogs(logs)
+      if err := sumoLogger.sendLogs(logs); err != nil {
+        logrus.Error(err)
+      } else {
+        logs = logs[:0]
+      }
     case log, open := <-sumoLogger.logQueue:
       if !open {
-        sumoLogger.sendLogs(logs)
+        if err := sumoLogger.sendLogs(logs); err != nil {
+          logrus.Error(err)
+        }
         return
       }
       logs = append(logs, log)
       if len(logs) % sumoLogger.batchSize == 0 {
-        logs = sumoLogger.sendLogs(logs)
+        if err := sumoLogger.sendLogs(logs); err != nil {
+          logrus.Error(err)
+        } else {
+          logs = logs[:0]
+        }
       }
     }
   }
 }
 
-func (sumoLogger *sumoLogger) sendLogs(logs []*sumoLog) []*sumoLog {
+func (sumoLogger *sumoLogger) sendLogs(logs []*sumoLog) error {
   logsCount := len(logs)
   if logsCount == 0 {
-    return logs
+    return nil
   }
   var logsBatch bytes.Buffer
   for _, log := range logs {
     if _, err := logsBatch.Write(log.line); err != nil {
-      logrus.Error(err)
+      return err
     }
   }
 
   // TODO: error handling, retries and exponential backoff
   request, err := http.NewRequest("POST", sumoLogger.httpSourceUrl, bytes.NewBuffer(logsBatch.Bytes()))
   if err != nil {
-    logrus.Error(err)
+    return err
   }
   response, err := sumoLogger.httpClient.Do(request)
   if err != nil {
-    logrus.Error(err)
+    return err
   }
 
   defer response.Body.Close()
   if response.StatusCode != http.StatusOK {
     body, err := ioutil.ReadAll(response.Body)
     if err != nil {
-      logrus.Error(err)
+      return err
     }
-    logrus.Error(fmt.Errorf("%s: Failed to send event: %s - %s", pluginName, response.Status, body))
-    return logs
+    return fmt.Errorf("%s: Failed to send event: %s - %s", pluginName, response.Status, body)
   }
-  return logs[:0]
+  return nil
 }
