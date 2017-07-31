@@ -41,34 +41,34 @@ func NewMockHttpClient(statusCode int) *mockHttpClient {
 
 func TestConsumeLogsFromFifo(t *testing.T) {
   testLogMessage := &logdriver.LogEntry{
-		Source: testSource,
-		TimeNano: testTime,
-		Line: testLine,
-		Partial: testPartial,
+    Source: testSource,
+    TimeNano: testTime,
+    Line: testLine,
+    Partial: testIsPartial,
   }
 
-  fifoLogStream, err := fifo.OpenFifo(context.Background(), filePath, unix.O_RDWR|unix.O_CREAT|unix.O_NONBLOCK, 0700)
+  inputQueueFile, err := fifo.OpenFifo(context.Background(), filePath, unix.O_RDWR|unix.O_CREAT|unix.O_NONBLOCK, fileMode)
   defer os.Remove(filePath)
   assert.Nil(t, err)
 
   testSumoLogger := &sumoLogger{
     httpSourceUrl: httpSourceUrl,
-    client: NewMockHttpClient(http.StatusOK),
-    fifoLogStream: fifoLogStream,
-    logStream: make(chan *sumoLog, 4000),
-    frequency: 5 * time.Second,
+    httpClient: NewMockHttpClient(http.StatusOK),
+    inputQueueFile: inputQueueFile,
+    logQueue: make(chan *sumoLog, 4000),
+    sendingFrequency: 5 * time.Second,
   }
 
   go consumeLogsFromFifo(testSumoLogger)
 
-  enc := logdriver.NewLogEntryEncoder(fifoLogStream)
+  enc := logdriver.NewLogEntryEncoder(inputQueueFile)
 
   t.Run("Consume one log", func(t *testing.T) {
     enc.Encode(testLogMessage)
-    consumedLog := <-testSumoLogger.logStream
-    assert.Equal(t, testSource, consumedLog.Source, "should read the correct log source")
-    assert.Equal(t, testLine, consumedLog.Line, "should read the correct log line")
-    assert.Equal(t, testPartial, consumedLog.Partial, "should read the correct log partial")
+    consumedLog := <-testSumoLogger.logQueue
+    assert.Equal(t, testSource, consumedLog.source, "should read the correct log source")
+    assert.Equal(t, testLine, consumedLog.line, "should read the correct log line")
+    assert.Equal(t, testIsPartial, consumedLog.isPartial, "should read the correct log partial")
   })
 
   t.Run("Consume many logs", func(t *testing.T) {
@@ -77,19 +77,19 @@ func TestConsumeLogsFromFifo(t *testing.T) {
       enc.Encode(testLogMessage)
     }
     for i := 0; i < testLogsCount; i++ {
-      consumedLog := <-testSumoLogger.logStream
-      assert.Equal(t, testSource, consumedLog.Source, "should read the correct log source")
-      assert.Equal(t, testLine, consumedLog.Line, "should read the correct log line")
-      assert.Equal(t, testPartial, consumedLog.Partial, "should read the correct log partial")
+      consumedLog := <-testSumoLogger.logQueue
+      assert.Equal(t, testSource, consumedLog.source, "should read the correct log source")
+      assert.Equal(t, testLine, consumedLog.line, "should read the correct log line")
+      assert.Equal(t, testIsPartial, consumedLog.isPartial, "should read the correct log partial")
     }
   })
 }
 
 func TestQueueLogsForSending(t *testing.T) {
   testSumoLog := &sumoLog{
-		Source: testSource,
-		Line: testLine,
-		Partial: testPartial,
+    source: testSource,
+    line: testLine,
+    isPartial: testIsPartial,
   }
 
   t.Run("batchSize=1", func(t *testing.T) {
@@ -97,9 +97,9 @@ func TestQueueLogsForSending(t *testing.T) {
     testClient := NewMockHttpClient(http.StatusOK)
     testSumoLogger := &sumoLogger{
       httpSourceUrl: httpSourceUrl,
-      client: testClient,
-      logStream: testLogStream,
-      frequency: 2 * time.Second,
+      httpClient: testClient,
+      logQueue: testLogStream,
+      sendingFrequency: 2 * time.Second,
       batchSize: 1,
     }
     go queueLogsForSending(testSumoLogger)
@@ -124,9 +124,9 @@ func TestQueueLogsForSending(t *testing.T) {
     testBatchSize := 10
     testSumoLogger := &sumoLogger{
       httpSourceUrl: httpSourceUrl,
-      client: testClient,
-      logStream: testLogStream,
-      frequency: 2 * time.Second,
+      httpClient: testClient,
+      logQueue: testLogStream,
+      sendingFrequency: 2 * time.Second,
       batchSize: testBatchSize,
     }
     go queueLogsForSending(testSumoLogger)
@@ -135,7 +135,6 @@ func TestQueueLogsForSending(t *testing.T) {
     time.Sleep(time.Second)
     assert.Equal(t, 0, testClient.requestCount,
       "should have received no requests, fewer messages than batch size (timer should not have clicked in time)")
-    testClient.Reset()
 
     testLogCount := 1000
     for i := 0; i < testLogCount; i++ {
@@ -154,9 +153,9 @@ func TestQueueLogsForSending(t *testing.T) {
     testBatchSize := 1000
     testSumoLogger := &sumoLogger{
       httpSourceUrl: httpSourceUrl,
-      client: testClient,
-      logStream: testLogStream,
-      frequency: 2 * time.Second,
+      httpClient: testClient,
+      logQueue: testLogStream,
+      sendingFrequency: 2 * time.Second,
       batchSize: testBatchSize,
     }
     go queueLogsForSending(testSumoLogger)
@@ -165,7 +164,6 @@ func TestQueueLogsForSending(t *testing.T) {
     time.Sleep(time.Second)
     assert.Equal(t, 0, testClient.requestCount,
       "should have received no requests, fewer messages than batch size (timer should not have clicked in time)")
-    testClient.Reset()
 
     testLogCount := 1000
     for i := 0; i < testLogCount; i++ {
@@ -188,37 +186,37 @@ func TestSendLogs(t *testing.T) {
     testClient := NewMockHttpClient(http.StatusOK)
     testSumoLogger := &sumoLogger{
       httpSourceUrl: httpSourceUrl,
-      client: testClient,
-      logStream: testLogStream,
-      frequency: defaultFrequency,
+      httpClient: testClient,
+      logQueue: testLogStream,
+      sendingFrequency: defaultSendingFrequency,
       batchSize: defaultBatchSize,
     }
 
-    testLogs = testSumoLogger.sendLogs(testLogs)
-    assert.Equal(t, 0, len(testLogs), "should be no logs in queue")
+    err := testSumoLogger.sendLogs(testLogs)
+    assert.Nil(t, err, "should be no errors sending logs")
     assert.Equal(t, 0, testClient.requestCount, "should have received no requests")
   })
 
   t.Run("logCount=1, status=OK", func(t *testing.T) {
     var testLogs []*sumoLog
     testLog := &sumoLog{
-  		Source: testSource,
-  		Line: testLine,
-  		Partial: testPartial,
+      source: testSource,
+      line: testLine,
+      isPartial: testIsPartial,
     }
     testLogs = append(testLogs, testLog)
 
     testClient := NewMockHttpClient(http.StatusOK)
     testSumoLogger := &sumoLogger{
       httpSourceUrl: httpSourceUrl,
-      client: testClient,
-      logStream: testLogStream,
-      frequency: defaultFrequency,
+      httpClient: testClient,
+      logQueue: testLogStream,
+      sendingFrequency: defaultSendingFrequency,
       batchSize: defaultBatchSize,
     }
 
-    testLogs = testSumoLogger.sendLogs(testLogs)
-    assert.Equal(t, 0, len(testLogs), "should be no logs in queue")
+    err := testSumoLogger.sendLogs(testLogs)
+    assert.Nil(t, err, "should be no errors sending logs")
     assert.Equal(t, 1, testClient.requestCount, "should have received one request")
   })
 
@@ -226,9 +224,9 @@ func TestSendLogs(t *testing.T) {
     logCount := 1000
     var testLogs []*sumoLog
     testLog := &sumoLog{
-  		Source: testSource,
-  		Line: testLine,
-  		Partial: testPartial,
+      source: testSource,
+      line: testLine,
+      isPartial: testIsPartial,
     }
     for i := 0; i < logCount; i++ {
       testLogs = append(testLogs, testLog)
@@ -237,37 +235,37 @@ func TestSendLogs(t *testing.T) {
     testClient := NewMockHttpClient(http.StatusOK)
     testSumoLogger := &sumoLogger{
       httpSourceUrl: httpSourceUrl,
-      client: testClient,
-      logStream: testLogStream,
-      frequency: defaultFrequency,
+      httpClient: testClient,
+      logQueue: testLogStream,
+      sendingFrequency: defaultSendingFrequency,
       batchSize: defaultBatchSize,
     }
 
-    testLogs = testSumoLogger.sendLogs(testLogs)
-    assert.Equal(t, 0, len(testLogs), "should be no logs in queue")
+    err := testSumoLogger.sendLogs(testLogs)
+    assert.Nil(t, err, "should be no errors sending logs")
     assert.Equal(t, 1, testClient.requestCount, "should have received one request, logs are batched")
   })
 
   t.Run("logCount=1, status=BadRequest", func(t *testing.T) {
     var testLogs []*sumoLog
     testLog := &sumoLog{
-  		Source: testSource,
-  		Line: testLine,
-  		Partial: testPartial,
+      source: testSource,
+      line: testLine,
+      isPartial: testIsPartial,
     }
     testLogs = append(testLogs, testLog)
 
     testClient := NewMockHttpClient(http.StatusBadRequest)
     testSumoLogger := &sumoLogger{
       httpSourceUrl: httpSourceUrl,
-      client: testClient,
-      logStream: testLogStream,
-      frequency: defaultFrequency,
+      httpClient: testClient,
+      logQueue: testLogStream,
+      sendingFrequency: defaultSendingFrequency,
       batchSize: defaultBatchSize,
     }
 
-    testLogs = testSumoLogger.sendLogs(testLogs)
-    assert.Equal(t, 1, len(testLogs), "all logs should be returned to queue")
+    err := testSumoLogger.sendLogs(testLogs)
+    assert.NotNil(t, err, "should be an error sending logs")
     assert.Equal(t, 1, testClient.requestCount, "should have received one request, logs are batched")
   })
 
@@ -275,9 +273,9 @@ func TestSendLogs(t *testing.T) {
     logCount := 1000
     var testLogs []*sumoLog
     testLog := &sumoLog{
-  		Source: testSource,
-  		Line: testLine,
-  		Partial: testPartial,
+      source: testSource,
+      line: testLine,
+      isPartial: testIsPartial,
     }
     for i := 0; i < logCount; i++ {
       testLogs = append(testLogs, testLog)
@@ -286,14 +284,14 @@ func TestSendLogs(t *testing.T) {
     testClient := NewMockHttpClient(http.StatusBadRequest)
     testSumoLogger := &sumoLogger{
       httpSourceUrl: httpSourceUrl,
-      client: testClient,
-      logStream: testLogStream,
-      frequency: defaultFrequency,
+      httpClient: testClient,
+      logQueue: testLogStream,
+      sendingFrequency: defaultSendingFrequency,
       batchSize: defaultBatchSize,
     }
 
-    testLogs = testSumoLogger.sendLogs(testLogs)
-    assert.Equal(t, logCount, len(testLogs), "all logs should be returned to queue")
+    err := testSumoLogger.sendLogs(testLogs)
+    assert.NotNil(t, err, "should be an error sending logs")
     assert.Equal(t, 1, testClient.requestCount, "should have received one request, logs are batched")
   })
 }

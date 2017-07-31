@@ -20,7 +20,7 @@ const (
 func main() {
   pluginHandler := sdk.NewHandler(`{"Implements": ["LoggingDriver"]}`)
 
-  sumoDriver := NewSumoDriver()
+  sumoDriver := newSumoDriver()
   initHandlers(&pluginHandler, sumoDriver)
   if err := pluginHandler.ServeUnix(pluginName, 0); err != nil {
     panic(err)
@@ -33,16 +33,16 @@ func initHandlers(pluginHandler *sdk.Handler, sumoDriver SumoDriver) {
 }
 
 type StartLoggingRequest struct {
-	File string
-	Info logger.Info
+  File string
+  Info logger.Info
 }
 
 type StopLoggingRequest struct {
-	File string
+  File string
 }
 
 type PluginResponse struct {
-	Err string
+  Err string
 }
 
 func startLoggingHandler(sumoDriver SumoDriver) func(w http.ResponseWriter, r *http.Request) {
@@ -78,9 +78,9 @@ func stopLoggingHandler(sumoDriver SumoDriver) func(w http.ResponseWriter, r *ht
 }
 
 func respond(w http.ResponseWriter, err error) {
-	var res PluginResponse
-	if err != nil {
-		res.Err = err.Error()
-	}
-	json.NewEncoder(w).Encode(&res)
+  var res PluginResponse
+  if err != nil {
+    res.Err = err.Error()
+  }
+  json.NewEncoder(w).Encode(&res)
 }
