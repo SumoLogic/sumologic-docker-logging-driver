@@ -39,6 +39,12 @@ const (
   logOptInsecureSkipVerify = "sumo-insecure-skip-verify"
   logOptRootCaPath = "sumo-root-ca-path"
   logOptServerName = "sumo-server-name"
+  logOptSendingFrequency = "sumo-sending-frequency"
+  logOptStreamSize = "sumo-stream-size"
+  logOptBatchSize = "sumo-batch-size"
+
+  stringToIntBase = 10
+  stringToIntBitSize = 32
 )
 
 type SumoDriver interface {
@@ -115,7 +121,7 @@ func (sumoDriver *sumoDriver) startLoggingInternal(file string, info logger.Info
 	gzipCompressionLevel := gzip.DefaultCompression
 	if gzipCompressionLevelStr, exists := info.Config[logOptGzipCompressionLevel]; exists {
 		var err error
-		gzipCompressionLevel64, err := strconv.ParseInt(gzipCompressionLevelStr, 10, 32)
+		gzipCompressionLevel64, err := strconv.ParseInt(gzipCompressionLevelStr, stringToIntBase, stringToIntBitSize)
 		if err != nil {
 			return nil, err
 		}
@@ -178,20 +184,20 @@ func (sumoDriver *sumoDriver) startLoggingInternal(file string, info logger.Info
   }
   streamSize := defaultStreamSize
   if streamSizeStr, exists := info.Config[logOptStreamSize]; exists {
-    base := 10
-    bitSize := 32
-    streamSize, err = strconv.ParseInt(streamSizeStr, base, bitSize)
+    streamSize64, err := strconv.ParseInt(streamSizeStr, stringToIntBase, stringToIntBitSize)
+    streamSize = int(streamSize64)
     if err != nil {
       logrus.Error(fmt.Sprintf("Failed to parse value of %s as integer. Using default %d. %v", logOptStreamSize, defaultStreamSize, err))
+      streamSize = defaultStreamSize
     }
   }
   batchSize := defaultBatchSize
   if batchSizeStr, exists := info.Config[logOptStreamSize]; exists {
-    base := 10
-    bitSize := 32
-    batchSize, err = strconv.ParseInt(batchSizeStr, base, bitSize)
+    batchSize64, err := strconv.ParseInt(batchSizeStr, stringToIntBase, stringToIntBitSize)
+    batchSize = int(batchSize64)
     if err != nil {
       logrus.Error(fmt.Sprintf("Failed to parse value of %s as integer. Using default %d. %v", logOptBatchSize, defaultBatchSize, err))
+      batchSize = defaultBatchSize
     }
   }
 
