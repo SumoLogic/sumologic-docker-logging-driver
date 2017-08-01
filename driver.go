@@ -168,10 +168,32 @@ func (sumoDriver *sumoDriver) startLoggingInternal(file string, info logger.Info
     Transport: transport,
   }
 
-  // TODO: make options configurable through logOpts
   sendingFrequency := defaultSendingFrequency
+  if sendingFrequencyStr, exists := info.Config[logOptSendingFrequency]; exists {
+    sendingFrequency, err = time.ParseDuration(sendingFrequencyStr)
+    if err != nil {
+      logrus.Error(fmt.Sprintf("Failed to parse value of %s as duration. Using default %v. %v", logOptSendingFrequency, defaultSendingFrequency, err))
+      sendingFrequency = defaultSendingFrequency
+    }
+  }
   streamSize := defaultStreamSize
+  if streamSizeStr, exists := info.Config[logOptStreamSize]; exists {
+    base := 10
+    bitSize := 32
+    streamSize, err = strconv.ParseInt(streamSizeStr, base, bitSize)
+    if err != nil {
+      logrus.Error(fmt.Sprintf("Failed to parse value of %s as integer. Using default %d. %v", logOptStreamSize, defaultStreamSize, err))
+    }
+  }
   batchSize := defaultBatchSize
+  if batchSizeStr, exists := info.Config[logOptStreamSize]; exists {
+    base := 10
+    bitSize := 32
+    batchSize, err = strconv.ParseInt(batchSizeStr, base, bitSize)
+    if err != nil {
+      logrus.Error(fmt.Sprintf("Failed to parse value of %s as integer. Using default %d. %v", logOptBatchSize, defaultBatchSize, err))
+    }
+  }
 
   newSumoLogger := &sumoLogger{
     httpSourceUrl: info.Config[logOptUrl],
