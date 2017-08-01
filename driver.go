@@ -4,11 +4,14 @@ import (
   "bytes"
 	"compress/gzip"
   "context"
+  "crypto/tls"
+  "crypto/x509"
   "encoding/binary"
   "fmt"
   "io"
   "io/ioutil"
   "net/http"
+  "net/url"
   "strconv"
   "sync"
   "syscall"
@@ -32,6 +35,10 @@ const (
 
   logOptGzipCompression = "sumo-compress"
   logOptGzipCompressionLevel = "sumo-compress-level"
+  logOptProxyUrl = "sumo-proxy-url"
+  logOptInsecureSkipVerify = "sumo-insecure-skip-verify"
+  logOptRootCaPath = "sumo-root-ca-path"
+  logOptServerName = "sumo-server-name"
 )
 
 type SumoDriver interface {
@@ -120,6 +127,47 @@ func (sumoDriver *sumoDriver) startLoggingInternal(file string, info logger.Info
 		}
 	}
 
+  var proxyUrl *url.URL
+  proxyUrl = nil
+  if proxyUrlStr, exists := info.Config[logOptProxyUrl]; exists {
+    proxyUrl, err = url.Parse(proxyUrlStr)
+    if err != nil {
+      return nil, err
+    }
+  }
+
+  tlsConfig := &tls.Config{}
+
+  if insecureSkipVerifyStr, exists := info.Config[logOptInsecureSkipVerify]; exists {
+		insecureSkipVerify, err := strconv.ParseBool(insecureSkipVerifyStr)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.InsecureSkipVerify = insecureSkipVerify
+	}
+  if rootCaPath, exists := info.Config[logOptRootCaPath]; exists {
+    rootCa, err := ioutil.ReadFile(rootCaPath)
+    if err != nil {
+      return nil, err
+    }
+    rootCaPool := x509.NewCertPool()
+    rootCaPool.AppendCertsFromPEM(rootCa)
+    tlsConfig.RootCAs = rootCaPool
+  }
+
+  if serverName, exists := info.Config[logOptServerName]; exists {
+    tlsConfig.ServerName = serverName
+  }
+
+  transport := &http.Transport{
+    Proxy: http.ProxyURL(proxyUrl),
+    TLSClientConfig: tlsConfig,
+  }
+
+  httpClient := &http.Client{
+    Transport: transport,
+  }
+
   // TODO: make options configurable through logOpts
   sendingFrequency := defaultSendingFrequency
   streamSize := defaultStreamSize
@@ -127,7 +175,7 @@ func (sumoDriver *sumoDriver) startLoggingInternal(file string, info logger.Info
 
   newSumoLogger := &sumoLogger{
     httpSourceUrl: info.Config[logOptUrl],
-    httpClient: &http.Client{},
+    httpClient: httpClient,
     inputQueueFile: inputQueueFile,
     gzipCompression: gzipCompression,
     gzipCompressionLevel: gzipCompressionLevel,
