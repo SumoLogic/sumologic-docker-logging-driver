@@ -53,7 +53,7 @@ $ docker run --log-driver=sumologic \
 ```
 
 ## Setting Default Options
-To use the `sumologic` logging driver, find the `daemon.json` file located in `/etc/docker` on Linux hosts.
+To set the `sumologic` logging driver as the default, find the `daemon.json` file located in `/etc/docker` on Linux hosts.
 Set the `log-driver` and `log-opt` keys to the desired values and restart Docker for the changes to take effect. For more information about +configuring Docker using `daemon.json`, see [daemon.json].
 
 [daemon.json]: https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file
@@ -66,6 +66,8 @@ Set the `log-driver` and `log-opt` keys to the desired values and restart Docker
   }
 }
 ```
+
+Now all containers started with `docker run your/container` will use send logs to SumoLogic.
 
 ## Uninstall
 To cleanly disable and remove the plugin, run `plugin_uninstall.sh`.
