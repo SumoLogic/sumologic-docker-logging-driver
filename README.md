@@ -25,7 +25,7 @@ To run a specific container with the logging driver, you can use the `--log-driv
 $ docker run --log-driver=sumologic ...
 ```
 
-## SumoLogic Options
+### SumoLogic Options
 To specify additional logging driver options, you can use the `--log-opt NAME=VALUE` flag.
 
 | Option                      | Required? | Default Value | Description
@@ -52,7 +52,7 @@ $ docker run --log-driver=sumologic \
     your/container
 ```
 
-## Setting Default Options
+### Setting Default Options
 To set the `sumologic` logging driver as the default, find the `daemon.json` file located in `/etc/docker` on Linux hosts.
 Set the `log-driver` and `log-opt` keys to the desired values and restart Docker for the changes to take effect. For more information about +configuring Docker using `daemon.json`, see [daemon.json].
 
