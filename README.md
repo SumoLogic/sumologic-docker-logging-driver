@@ -32,7 +32,7 @@ To specify additional logging driver options, you can use the `--log-opt NAME=VA
 | --------------------------- | :-------: | :-----------: | -------------------------------------- |
 | `sumo-url`                  | Yes       |               | HTTP Source URL
 | `sumo-compress`             | No        | false         | Enable/disable gzip compression. Boolean.
-| `sumo-compress-level`       | No        | -1            | Set the gzip compression level, an integer from -1 to 9. Only applies if `sumo-compress=true`.
+| `sumo-compress-level`       | No        | -1            | Set the gzip compression level. Valid values are -1 (default), 0 (no compression), 1 (best speed) ... 9 (best compression).
 | `sumo-batch-size`           | No        | 1000          | The number of logs the driver should wait for before sending them in bulk. If the number of logs never reaches `sumo-batch-size`, the driver will send the logs in smaller batches at predefined intervals; see `sumo-sending-frequency`.
 | `sumo-sending-frequency`    | No        | 2s            | The maximum time the driver waits for number of logs to reach `sumo-batch-size` before sending the logs, even if the number of logs is less than the batch size. In the format 72h3m5s, valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 | `sumo-buffer-size`          | No        | 4000          | The maximum number of logs the driver can store for retries in the event of network failure, before logs begin to be dropped.
