@@ -40,7 +40,7 @@ const (
   logOptRootCaPath = "sumo-root-ca-path"
   logOptServerName = "sumo-server-name"
   logOptSendingFrequency = "sumo-sending-frequency"
-  logOptQueueSize = "sumo-queue-size"
+  logOptQueueSize = "sumo-buffer-size"
   logOptBatchSize = "sumo-batch-size"
 
   fileMode = 0700

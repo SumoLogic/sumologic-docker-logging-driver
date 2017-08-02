@@ -1,5 +1,5 @@
 #!/bin/bash
 
-docker plugin disable sumo-log-driver
-docker plugin rm sumo-log-driver
+docker plugin disable sumologic
+docker plugin rm sumologic
 sudo rm -rf rootfs
