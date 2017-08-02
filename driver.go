@@ -26,12 +26,12 @@ import (
 )
 
 const (
+  defaultInsecureSkipVerify = false
+  defaultGzipCompression = false
+  defaultGzipCompressionLevel = gzip.DefaultCompression
   defaultSendingFrequency  = 2 * time.Second
-  defaultStreamSize = 4000
+  defaultQueueSize = 4000
   defaultBatchSize = 1000
-
-  fileMode = 0700
-  fileReaderMaxSize = 1e6
 
   logOptGzipCompression = "sumo-compress"
   logOptGzipCompressionLevel = "sumo-compress-level"
@@ -40,9 +40,11 @@ const (
   logOptRootCaPath = "sumo-root-ca-path"
   logOptServerName = "sumo-server-name"
   logOptSendingFrequency = "sumo-sending-frequency"
-  logOptStreamSize = "sumo-stream-size"
+  logOptQueueSize = "sumo-queue-size"
   logOptBatchSize = "sumo-batch-size"
 
+  fileMode = 0700
+  fileReaderMaxSize = 1e6
   stringToIntBase = 10
   stringToIntBitSize = 32
 )
@@ -64,6 +66,9 @@ type HttpClient interface {
 type sumoLogger struct {
   httpSourceUrl string
   httpClient HttpClient
+
+  proxyUrl *url.URL
+  tlsConfig *tls.Config
 
   gzipCompression bool
   gzipCompressionLevel int
@@ -110,47 +115,16 @@ func (sumoDriver *sumoDriver) startLoggingInternal(file string, info logger.Info
     return nil, errors.Wrapf(err, "error opening logger fifo: %q", file)
   }
 
-  gzipCompression := false
-	if gzipCompressionStr, exists := info.Config[logOptGzipCompression]; exists {
-		gzipCompression, err = strconv.ParseBool(gzipCompressionStr)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	gzipCompressionLevel := gzip.DefaultCompression
-	if gzipCompressionLevelStr, exists := info.Config[logOptGzipCompressionLevel]; exists {
-		var err error
-		gzipCompressionLevel64, err := strconv.ParseInt(gzipCompressionLevelStr, stringToIntBase, stringToIntBitSize)
-		if err != nil {
-			return nil, err
-		}
-		gzipCompressionLevel = int(gzipCompressionLevel64)
-		if gzipCompressionLevel < gzip.DefaultCompression || gzipCompressionLevel > gzip.BestCompression {
-			err := fmt.Errorf("Not supported level '%s' for %s (supported values between %d and %d).",
-				gzipCompressionLevelStr, logOptGzipCompressionLevel, gzip.DefaultCompression, gzip.BestCompression)
-			return nil, err
-		}
-	}
-
-  var proxyUrl *url.URL
-  proxyUrl = nil
-  if proxyUrlStr, exists := info.Config[logOptProxyUrl]; exists {
-    proxyUrl, err = url.Parse(proxyUrlStr)
-    if err != nil {
-      return nil, err
-    }
+  gzipCompression := parseLogOptBoolean(info, logOptGzipCompression, defaultGzipCompression)
+  gzipCompressionLevel := parseLogOptInt(info, logOptGzipCompressionLevel, defaultGzipCompressionLevel)
+  if gzipCompressionLevel < defaultGzipCompressionLevel || gzipCompressionLevel > gzip.BestCompression {
+    logrus.Error(fmt.Errorf("Not supported level '%s' for %s (supported values between %d and %d). Using default compression.",
+      info.Config[logOptGzipCompressionLevel], logOptGzipCompressionLevel, defaultGzipCompressionLevel, gzip.BestCompression))
+    gzipCompressionLevel = defaultGzipCompressionLevel
   }
 
   tlsConfig := &tls.Config{}
-
-  if insecureSkipVerifyStr, exists := info.Config[logOptInsecureSkipVerify]; exists {
-		insecureSkipVerify, err := strconv.ParseBool(insecureSkipVerifyStr)
-		if err != nil {
-			return nil, err
-		}
-		tlsConfig.InsecureSkipVerify = insecureSkipVerify
-	}
+  tlsConfig.InsecureSkipVerify = parseLogOptBoolean(info, logOptInsecureSkipVerify, defaultInsecureSkipVerify)
   if rootCaPath, exists := info.Config[logOptRootCaPath]; exists {
     rootCa, err := ioutil.ReadFile(rootCaPath)
     if err != nil {
@@ -160,54 +134,44 @@ func (sumoDriver *sumoDriver) startLoggingInternal(file string, info logger.Info
     rootCaPool.AppendCertsFromPEM(rootCa)
     tlsConfig.RootCAs = rootCaPool
   }
-
   if serverName, exists := info.Config[logOptServerName]; exists {
     tlsConfig.ServerName = serverName
   }
 
-  transport := &http.Transport{
-    Proxy: http.ProxyURL(proxyUrl),
-    TLSClientConfig: tlsConfig,
-  }
+  transport := &http.Transport{}
+  proxyUrl := parseLogOptProxyUrl(info, logOptProxyUrl, nil)
+  transport.Proxy = http.ProxyURL(proxyUrl)
+  transport.TLSClientConfig = tlsConfig
 
   httpClient := &http.Client{
     Transport: transport,
   }
 
-  sendingFrequency := defaultSendingFrequency
-  if sendingFrequencyStr, exists := info.Config[logOptSendingFrequency]; exists {
-    sendingFrequency, err = time.ParseDuration(sendingFrequencyStr)
-    if err != nil {
-      logrus.Error(fmt.Sprintf("Failed to parse value of %s as duration. Using default %v. %v", logOptSendingFrequency, defaultSendingFrequency, err))
-      sendingFrequency = defaultSendingFrequency
-    }
+  sendingFrequency := parseLogOptDuration(info, logOptSendingFrequency, defaultSendingFrequency)
+  if sendingFrequency <= 0 {
+    logrus.Error(fmt.Errorf("%s must be a positive duration. Using default duration.", logOptSendingFrequency))
+    sendingFrequency = defaultSendingFrequency
   }
-  streamSize := defaultStreamSize
-  if streamSizeStr, exists := info.Config[logOptStreamSize]; exists {
-    streamSize64, err := strconv.ParseInt(streamSizeStr, stringToIntBase, stringToIntBitSize)
-    streamSize = int(streamSize64)
-    if err != nil {
-      logrus.Error(fmt.Sprintf("Failed to parse value of %s as integer. Using default %d. %v", logOptStreamSize, defaultStreamSize, err))
-      streamSize = defaultStreamSize
-    }
+  queueSize := parseLogOptInt(info, logOptQueueSize, defaultQueueSize)
+  if queueSize <= 0 {
+    logrus.Error(fmt.Errorf("%s must be a positive value, got %d. Using default queue size.", logOptQueueSize, queueSize))
+    queueSize = defaultQueueSize
   }
-  batchSize := defaultBatchSize
-  if batchSizeStr, exists := info.Config[logOptStreamSize]; exists {
-    batchSize64, err := strconv.ParseInt(batchSizeStr, stringToIntBase, stringToIntBitSize)
-    batchSize = int(batchSize64)
-    if err != nil {
-      logrus.Error(fmt.Sprintf("Failed to parse value of %s as integer. Using default %d. %v", logOptBatchSize, defaultBatchSize, err))
-      batchSize = defaultBatchSize
-    }
+  batchSize := parseLogOptInt(info, logOptBatchSize, defaultBatchSize)
+  if batchSize <= 0 {
+    logrus.Error(fmt.Errorf("%s must be a positive value, got %d. Using default batch size.", logOptBatchSize, batchSize))
+    batchSize = defaultBatchSize
   }
 
   newSumoLogger := &sumoLogger{
     httpSourceUrl: info.Config[logOptUrl],
     httpClient: httpClient,
+    proxyUrl: proxyUrl,
+    tlsConfig: tlsConfig,
     inputQueueFile: inputQueueFile,
     gzipCompression: gzipCompression,
     gzipCompressionLevel: gzipCompressionLevel,
-    logQueue: make(chan *sumoLog, streamSize),
+    logQueue: make(chan *sumoLog, queueSize),
     sendingFrequency: sendingFrequency,
     batchSize: batchSize,
   }
@@ -308,7 +272,7 @@ func (sumoLogger *sumoLogger) sendLogs(logs []*sumoLog) error {
     writer = &logsBatch
   }
   for _, log := range logs {
-    if _, err := writer.Write(log.line); err != nil {
+    if _, err := writer.Write(append(log.line, []byte("\n")...)); err != nil {
       return err
     }
   }
@@ -342,4 +306,56 @@ func (sumoLogger *sumoLogger) sendLogs(logs []*sumoLog) error {
     return fmt.Errorf("%s: Failed to send event: %s - %s", pluginName, response.Status, body)
   }
   return nil
+}
+
+func parseLogOptInt(info logger.Info, logOptKey string, defaultValue int) int {
+  if input, exists := info.Config[logOptKey]; exists {
+    inputValue, err := strconv.ParseInt(input, stringToIntBase, stringToIntBitSize)
+    if err != nil {
+      logrus.Error(fmt.Errorf("Failed to parse value of %s as integer. Using default %d. %v",
+        logOptKey, defaultValue, err))
+      return defaultValue
+    }
+    return int(inputValue)
+  }
+  return defaultValue
+}
+
+func parseLogOptDuration(info logger.Info, logOptKey string, defaultValue time.Duration) time.Duration {
+  if input, exists := info.Config[logOptKey]; exists {
+    inputValue, err := time.ParseDuration(input)
+    if err != nil {
+      logrus.Error(fmt.Errorf("Failed to parse value of %s as duration. Using default %v. %v",
+        logOptKey, defaultValue, err))
+      return defaultValue
+    }
+    return inputValue
+  }
+  return defaultValue
+}
+
+func parseLogOptBoolean(info logger.Info, logOptKey string, defaultValue bool) bool {
+  if input, exists := info.Config[logOptKey]; exists {
+    inputValue, err := strconv.ParseBool(input)
+    if err != nil {
+      logrus.Error(fmt.Errorf("Failed to parse value of %s as boolean. Using default %t. %v",
+        logOptKey, defaultValue, err))
+      return defaultValue
+    }
+    return inputValue
+  }
+  return defaultValue
+}
+
+func parseLogOptProxyUrl(info logger.Info, logOptKey string, defaultValue *url.URL) *url.URL {
+  if input, exists := info.Config[logOptKey]; exists {
+    inputValue, err := url.Parse(input)
+    if err != nil {
+      logrus.Error(fmt.Errorf("Failed to parse value of %s as url. Initializing without proxy. %v",
+        logOptKey, defaultValue, err))
+      return defaultValue
+    }
+    return inputValue
+  }
+  return defaultValue
 }
