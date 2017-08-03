@@ -227,31 +227,39 @@ func queueLogsForSending(sumoLogger *sumoLogger) {
   for {
     select {
     case <-timer.C:
-      if err := sumoLogger.sendLogs(logs); err != nil {
-        logrus.Error(err)
-      } else {
-        logs = logs[:0]
-      }
+      logs = sumoLogger.sendLogs(logs)
     case log, open := <-sumoLogger.logQueue:
       if !open {
-        if err := sumoLogger.sendLogs(logs); err != nil {
-          logrus.Error(err)
-        }
+        sumoLogger.sendLogs(logs)
         return
       }
       logs = append(logs, log)
       if len(logs) % sumoLogger.batchSize == 0 {
-        if err := sumoLogger.sendLogs(logs); err != nil {
-          logrus.Error(err)
-        } else {
-          logs = logs[:0]
-        }
+        logs = sumoLogger.sendLogs(logs)
       }
     }
   }
 }
 
-func (sumoLogger *sumoLogger) sendLogs(logs []*sumoLog) error {
+func (sumoLogger *sumoLogger) sendLogs(logs []*sumoLog) []*sumoLog {
+  var failedLogs []*sumoLog
+  logsCount := len(logs)
+  for i := 0; i < logsCount; i += sumoLogger.batchSize {
+    upperBound := i + sumoLogger.batchSize
+    if upperBound > logsCount {
+      upperBound = logsCount
+    }
+    if err := sumoLogger.makePostRequest(logs[i:upperBound]); err != nil {
+      logrus.Error(err)
+      failedLogs = logs[i:logsCount]
+      return failedLogs
+    }
+  }
+  failedLogs = logs[:0]
+  return failedLogs
+}
+
+func (sumoLogger *sumoLogger) makePostRequest(logs []*sumoLog) error {
   logsCount := len(logs)
   if logsCount == 0 {
     return nil

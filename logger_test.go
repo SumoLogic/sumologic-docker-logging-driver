@@ -192,7 +192,7 @@ func TestSendLogs(t *testing.T) {
       batchSize: defaultBatchSize,
     }
 
-    err := testSumoLogger.sendLogs(testLogs)
+    err := testSumoLogger.makePostRequest(testLogs)
     assert.Nil(t, err, "should be no errors sending logs")
     assert.Equal(t, 0, testClient.requestCount, "should have received no requests")
   })
@@ -215,7 +215,7 @@ func TestSendLogs(t *testing.T) {
       batchSize: defaultBatchSize,
     }
 
-    err := testSumoLogger.sendLogs(testLogs)
+    err := testSumoLogger.makePostRequest(testLogs)
     assert.Nil(t, err, "should be no errors sending logs")
     assert.Equal(t, 1, testClient.requestCount, "should have received one request")
   })
@@ -241,7 +241,7 @@ func TestSendLogs(t *testing.T) {
       batchSize: defaultBatchSize,
     }
 
-    err := testSumoLogger.sendLogs(testLogs)
+    err := testSumoLogger.makePostRequest(testLogs)
     assert.Nil(t, err, "should be no errors sending logs")
     assert.Equal(t, 1, testClient.requestCount, "should have received one request, logs are batched")
   })
@@ -264,7 +264,7 @@ func TestSendLogs(t *testing.T) {
       batchSize: defaultBatchSize,
     }
 
-    err := testSumoLogger.sendLogs(testLogs)
+    err := testSumoLogger.makePostRequest(testLogs)
     assert.NotNil(t, err, "should be an error sending logs")
     assert.Equal(t, 1, testClient.requestCount, "should have received one request, logs are batched")
   })
@@ -290,7 +290,7 @@ func TestSendLogs(t *testing.T) {
       batchSize: defaultBatchSize,
     }
 
-    err := testSumoLogger.sendLogs(testLogs)
+    err := testSumoLogger.makePostRequest(testLogs)
     assert.NotNil(t, err, "should be an error sending logs")
     assert.Equal(t, 1, testClient.requestCount, "should have received one request, logs are batched")
   })
