@@ -179,6 +179,50 @@ func TestQueueLogsForSending(t *testing.T) {
 
 func TestSendLogs(t *testing.T) {
   testLogQueue := make(chan *sumoLog, 4000)
+  var testLogs []*sumoLog
+  testClient := NewMockHttpClient(http.StatusOK)
+  testSumoLogger := &sumoLogger{
+    httpSourceUrl: testHttpSourceUrl,
+    httpClient: testClient,
+    logQueue: testLogQueue,
+    sendingFrequency: defaultSendingFrequency,
+    batchSize: 10,
+  }
+
+  testLog := &sumoLog{
+    source: testSource,
+    line: testLine,
+    isPartial: testIsPartial,
+  }
+
+  t.Run("logCount=0", func(t *testing.T) {
+    testLogs = testSumoLogger.sendLogs(testLogs)
+    assert.Equal(t, 0, len(testLogs), "should have no failed logs")
+    testClient.Reset()
+  })
+
+  t.Run("logCount=1", func(t *testing.T) {
+    testLogs = append(testLogs, testLog)
+    testLogs = testSumoLogger.sendLogs(testLogs)
+    assert.Equal(t, 0, len(testLogs), "should have no failed logs")
+    assert.Equal(t, 1, testClient.requestCount, "should have received one request")
+    testClient.Reset()
+  })
+
+  t.Run("logCount=100", func(t *testing.T) {
+    testLogsCount := 100
+    for i := 0; i < testLogsCount; i++ {
+      testLogs = append(testLogs, testLog)
+    }
+    testLogs = testSumoLogger.sendLogs(testLogs)
+    assert.Equal(t, 0, len(testLogs), "should have no failed logs")
+    assert.Equal(t, testLogsCount / testSumoLogger.batchSize, testClient.requestCount, "should have receieved one request per batch")
+    testClient.Reset()
+  })
+}
+
+func TestMakePostRequest(t *testing.T) {
+  testLogQueue := make(chan *sumoLog, 4000)
 
   t.Run("logCount=0, status=OK", func(t *testing.T) {
     var testLogs []*sumoLog
