@@ -2,7 +2,7 @@ package main
 
 import (
   "bytes"
-	"compress/gzip"
+  "compress/gzip"
   "context"
   "crypto/tls"
   "crypto/x509"
@@ -285,11 +285,11 @@ func (sumoLogger *sumoLogger) makePostRequest(logs []*sumoLog) error {
     }
   }
   if sumoLogger.gzipCompression {
-		err = gzipWriter.Close()
-		if err != nil {
-			return err
-		}
-	}
+    err = gzipWriter.Close()
+    if err != nil {
+      return err
+    }
+  }
 
   // TODO: error handling, retries and exponential backoff
   request, err := http.NewRequest("POST", sumoLogger.httpSourceUrl, bytes.NewBuffer(logsBatch.Bytes()))
