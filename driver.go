@@ -31,6 +31,7 @@ const (
   defaultGzipCompressionLevel = gzip.DefaultCompression
   defaultSendingFrequency  = 2 * time.Second
   defaultQueueSize = 4000
+  defaultBufferSize = 10000
   defaultBatchSize = 1000
 
   logOptGzipCompression = "sumo-compress"
@@ -40,7 +41,8 @@ const (
   logOptRootCaPath = "sumo-root-ca-path"
   logOptServerName = "sumo-server-name"
   logOptSendingFrequency = "sumo-sending-frequency"
-  logOptQueueSize = "sumo-buffer-size"
+  logOptQueueSize = "sumo-queue-size"
+  logOptBufferSize = "sumo-buffer-size"
   logOptBatchSize = "sumo-batch-size"
 
   fileMode = 0700
@@ -77,6 +79,7 @@ type sumoLogger struct {
   logQueue chan *sumoLog
   sendingFrequency time.Duration
   batchSize int
+  bufferSize int
 }
 
 type sumoLog struct {
@@ -157,6 +160,11 @@ func (sumoDriver *sumoDriver) startLoggingInternal(file string, info logger.Info
     logrus.Error(fmt.Errorf("%s must be a positive value, got %d. Using default queue size.", logOptQueueSize, queueSize))
     queueSize = defaultQueueSize
   }
+  bufferSize := parseLogOptInt(info, logOptBufferSize, defaultBufferSize)
+  if bufferSize <= 0 {
+    logrus.Error(fmt.Errorf("%s must be a positive value, got %d. Using default buffer size.", logOptBufferSize, bufferSize))
+    bufferSize = defaultBufferSize
+  }
   batchSize := parseLogOptInt(info, logOptBatchSize, defaultBatchSize)
   if batchSize <= 0 {
     logrus.Error(fmt.Errorf("%s must be a positive value, got %d. Using default batch size.", logOptBatchSize, batchSize))
@@ -174,6 +182,7 @@ func (sumoDriver *sumoDriver) startLoggingInternal(file string, info logger.Info
     logQueue: make(chan *sumoLog, queueSize),
     sendingFrequency: sendingFrequency,
     batchSize: batchSize,
+    bufferSize: bufferSize,
   }
 
   sumoDriver.mu.Lock()
