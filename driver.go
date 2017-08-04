@@ -97,7 +97,7 @@ func (sumoDriver *sumoDriver) StartLogging(file string, info logger.Info) error 
   if err != nil {
     return err
   }
-  go consumeLogsFromFifo(newSumoLogger)
+  go consumeLogsFromFile(newSumoLogger)
   go queueLogsForSending(newSumoLogger)
   return nil
 }
@@ -194,7 +194,7 @@ func (sumoDriver *sumoDriver) StopLogging(file string) error {
   return nil
 }
 
-func consumeLogsFromFifo(sumoLogger *sumoLogger) {
+func consumeLogsFromFile(sumoLogger *sumoLogger) {
   dec := protoio.NewUint32DelimitedReader(sumoLogger.inputQueueFile, binary.BigEndian, fileReaderMaxSize)
   defer dec.Close()
   var buf logdriver.LogEntry
@@ -266,27 +266,12 @@ func (sumoLogger *sumoLogger) makePostRequest(logs []*sumoLog) error {
   }
 
   var logsBatch bytes.Buffer
-  var writer io.Writer
-  var gzipWriter *gzip.Writer
-  var err error
-
   if sumoLogger.gzipCompression {
-    gzipWriter, err = gzip.NewWriterLevel(&logsBatch, sumoLogger.gzipCompressionLevel)
-    if err != nil {
+    if err := sumoLogger.writeMessageGzipCompression(&logsBatch, logs); err != nil {
       return err
     }
-    writer = gzipWriter
   } else {
-    writer = &logsBatch
-  }
-  for _, log := range logs {
-    if _, err := writer.Write(append(log.line, []byte("\n")...)); err != nil {
-      return err
-    }
-  }
-  if sumoLogger.gzipCompression {
-    err = gzipWriter.Close()
-    if err != nil {
+    if err := sumoLogger.writeMessage(&logsBatch, logs); err != nil{
       return err
     }
   }
@@ -296,6 +281,7 @@ func (sumoLogger *sumoLogger) makePostRequest(logs []*sumoLog) error {
   if err != nil {
     return err
   }
+  request.Header.Add("Content-Type", "text/plain")
   if sumoLogger.gzipCompression {
     request.Header.Add("Content-Encoding", "gzip")
   }
@@ -312,6 +298,29 @@ func (sumoLogger *sumoLogger) makePostRequest(logs []*sumoLog) error {
       return err
     }
     return fmt.Errorf("%s: Failed to send event: %s - %s", pluginName, response.Status, body)
+  }
+  return nil
+}
+
+func (sumoLogger *sumoLogger) writeMessage(writer io.Writer, logs []*sumoLog) error {
+  for _, log := range logs {
+    if _, err := writer.Write(append(log.line, []byte("\n")...)); err != nil {
+      return err
+    }
+  }
+  return nil
+}
+
+func (sumoLogger *sumoLogger) writeMessageGzipCompression(writer io.Writer, logs []*sumoLog) error {
+  gzipWriter, err := gzip.NewWriterLevel(writer, sumoLogger.gzipCompressionLevel)
+  if err != nil {
+    return err
+  }
+  if err := sumoLogger.writeMessage(gzipWriter, logs); err != nil {
+    return err
+  }
+  if err := gzipWriter.Close(); err != nil {
+    return err
   }
   return nil
 }

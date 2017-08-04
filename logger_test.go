@@ -2,6 +2,7 @@ package main
 
 import (
   "bytes"
+  "compress/gzip"
   "context"
   "io/ioutil"
   "net/http"
@@ -59,7 +60,7 @@ func TestConsumeLogsFromFifo(t *testing.T) {
     sendingFrequency: 5 * time.Second,
   }
 
-  go consumeLogsFromFifo(testSumoLogger)
+  go consumeLogsFromFile(testSumoLogger)
 
   enc := logdriver.NewLogEntryEncoder(inputQueueFile)
 
@@ -338,4 +339,66 @@ func TestMakePostRequest(t *testing.T) {
     assert.NotNil(t, err, "should be an error sending logs")
     assert.Equal(t, 1, testClient.requestCount, "should have received one request, logs are batched")
   })
+}
+
+func TestWriteMessage(t *testing.T) {
+  testSumoLogger := &sumoLogger{
+    httpSourceUrl: testHttpSourceUrl,
+  }
+  var testLogs []*sumoLog
+  testLog := &sumoLog{
+    source: testSource,
+    line: testLine,
+    isPartial: testIsPartial,
+  }
+  var testLogsBatch bytes.Buffer
+
+  err := testSumoLogger.writeMessage(&testLogsBatch, testLogs)
+  assert.Nil(t, err, "should be no error when writing no logs")
+  assert.Equal(t, 0, testLogsBatch.Len(), "nothing should be written to the writer")
+
+  logCount := 100
+  for i := 0; i < logCount; i++ {
+    testLogs = append(testLogs, testLog)
+  }
+
+  err = testSumoLogger.writeMessage(&testLogsBatch, testLogs)
+  assert.Nil(t, err, "should be no error when writing logs")
+  assert.Equal(t, logCount * (len(testLog.line) + len([]byte("\n"))), testLogsBatch.Len(), "all logs should be written to the writer")
+}
+
+func TestWriteMessageGzipCompression(t *testing.T) {
+  testSumoLogger := &sumoLogger{
+    httpSourceUrl: testHttpSourceUrl,
+    gzipCompression: true,
+    gzipCompressionLevel: defaultGzipCompressionLevel,
+  }
+  var testLogs []*sumoLog
+  testLog := &sumoLog{
+    source: testSource,
+    line: testLine,
+    isPartial: testIsPartial,
+  }
+  var testLogsBatch bytes.Buffer
+
+  err := testSumoLogger.writeMessageGzipCompression(&testLogsBatch, testLogs)
+  assert.Nil(t, err, "should be no error when writing no logs")
+
+  verifyGzipReader, _ := gzip.NewReader(&testLogsBatch)
+  testDecompressedLogs, _ := ioutil.ReadAll(verifyGzipReader)
+  assert.Equal(t, 0, len(testDecompressedLogs), "nothing should be written to the writer")
+  verifyGzipReader.Close()
+
+  logCount := 100
+  for i := 0; i < logCount; i++ {
+    testLogs = append(testLogs, testLog)
+  }
+  err = testSumoLogger.writeMessageGzipCompression(&testLogsBatch, testLogs)
+  assert.Nil(t, err, "should be no error when writing logs")
+
+  verifyGzipReader, _ = gzip.NewReader(&testLogsBatch)
+  testDecompressedLogs, _ = ioutil.ReadAll(verifyGzipReader)
+
+  assert.Equal(t, logCount * (len(testLog.line) + len([]byte("\n"))), len(testDecompressedLogs), "all logs should be written to the writer")
+  verifyGzipReader.Close()
 }
