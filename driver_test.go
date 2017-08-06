@@ -62,7 +62,7 @@ func TestDriversDefaultConfig (t *testing.T) {
     assert.Equal(t, testHttpSourceUrl, testSumoLogger1.httpSourceUrl, "http source url should be configured correctly")
     assert.Equal(t, false, testSumoLogger1.gzipCompression, "compression not specified, should be false")
     assert.Equal(t, gzip.DefaultCompression, testSumoLogger1.gzipCompressionLevel, "compression level not specified, should be default value")
-    assert.Equal(t, defaultSendingFrequency, testSumoLogger1.sendingFrequency, "sending frequency not specified, should be default value")
+    assert.Equal(t, defaultSendingInterval, testSumoLogger1.sendingInterval, "sending interval not specified, should be default value")
     assert.Equal(t, defaultQueueSize, cap(testSumoLogger1.logQueue), "queue size not specified, should be default value")
     assert.Equal(t, defaultBatchSize, testSumoLogger1.batchSize, "batch size not specified, should be default value")
     assert.Equal(t, &tls.Config{}, testSumoLogger1.tlsConfig, "no tls configs specified, should be default value")
@@ -147,7 +147,7 @@ func TestDriversLogOpts (t *testing.T) {
 
   testGzipCompression := true
   testGzipCompressionLevel := gzip.BestCompression
-  testSendingFrequency := time.Second
+  testSendingInterval := time.Second
   testQueueSize := 2000
   testBatchSize := 1000
 
@@ -160,7 +160,7 @@ func TestDriversLogOpts (t *testing.T) {
         logOptServerName: testServerName,
         logOptGzipCompression: strconv.FormatBool(testGzipCompression),
         logOptGzipCompressionLevel: strconv.Itoa(testGzipCompressionLevel),
-        logOptSendingFrequency: testSendingFrequency.String(),
+        logOptSendingInterval: testSendingInterval.String(),
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
@@ -176,7 +176,7 @@ func TestDriversLogOpts (t *testing.T) {
     assert.Equal(t, testHttpSourceUrl, testSumoLogger.httpSourceUrl, "http source url should be configured correctly")
     assert.Equal(t, testGzipCompression, testSumoLogger.gzipCompression, "compression specified, should be specified value")
     assert.Equal(t, testGzipCompressionLevel, testSumoLogger.gzipCompressionLevel, "compression level specified, should be specified value")
-    assert.Equal(t, testSendingFrequency, testSumoLogger.sendingFrequency, "sending frequency specified, should be specified value")
+    assert.Equal(t, testSendingInterval, testSumoLogger.sendingInterval, "sending interval specified, should be specified value")
     assert.Equal(t, testQueueSize, cap(testSumoLogger.logQueue), "queue size specified, should be specified value")
     assert.Equal(t, testBatchSize, testSumoLogger.batchSize, "batch size specified, should be specified value")
     assert.Equal(t, testProxyUrl, testSumoLogger.proxyUrl, "proxy url specified, should be specified value")
@@ -192,7 +192,7 @@ func TestDriversLogOpts (t *testing.T) {
         logOptServerName: testServerName,
         logOptGzipCompression: strconv.FormatBool(testGzipCompression),
         logOptGzipCompressionLevel: strconv.Itoa(testGzipCompressionLevel),
-        logOptSendingFrequency: testSendingFrequency.String(),
+        logOptSendingInterval: testSendingInterval.String(),
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
@@ -213,7 +213,7 @@ func TestDriversLogOpts (t *testing.T) {
     assert.Equal(t, testHttpSourceUrl, testSumoLogger.httpSourceUrl, "http source url should be configured correctly")
     assert.Equal(t, testGzipCompression, testSumoLogger.gzipCompression, "compression specified, should be specified value")
     assert.Equal(t, testGzipCompressionLevel, testSumoLogger.gzipCompressionLevel, "compression level specified, should be specified value")
-    assert.Equal(t, testSendingFrequency, testSumoLogger.sendingFrequency, "sending frequency specified, should be specified value")
+    assert.Equal(t, testSendingInterval, testSumoLogger.sendingInterval, "sending interval specified, should be specified value")
     assert.Equal(t, testQueueSize, cap(testSumoLogger.logQueue), "queue size specified, should be specified value")
     assert.Equal(t, testBatchSize, testSumoLogger.batchSize, "batch size specified, should be specified value")
     assert.Equal(t, testProxyUrl, testSumoLogger.proxyUrl, "proxy url specified, should be specified value")
@@ -230,7 +230,7 @@ func TestDriversLogOpts (t *testing.T) {
         logOptServerName: testServerName,
         logOptGzipCompression: "truee",
         logOptGzipCompressionLevel: strconv.Itoa(testGzipCompressionLevel),
-        logOptSendingFrequency: testSendingFrequency.String(),
+        logOptSendingInterval: testSendingInterval.String(),
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
@@ -246,7 +246,7 @@ func TestDriversLogOpts (t *testing.T) {
     assert.Equal(t, testHttpSourceUrl, testSumoLogger.httpSourceUrl, "http source url should be configured correctly")
     assert.Equal(t, defaultGzipCompression, testSumoLogger.gzipCompression, "compression specified incorrectly, should be default value")
     assert.Equal(t, testGzipCompressionLevel, testSumoLogger.gzipCompressionLevel, "compression level specified, should be specified value")
-    assert.Equal(t, testSendingFrequency, testSumoLogger.sendingFrequency, "sending frequency specified, should be specified value")
+    assert.Equal(t, testSendingInterval, testSumoLogger.sendingInterval, "sending interval specified, should be specified value")
     assert.Equal(t, testQueueSize, cap(testSumoLogger.logQueue), "queue size specified, should be specified value")
     assert.Equal(t, testBatchSize, testSumoLogger.batchSize, "batch size specified, should be specified value")
     assert.Equal(t, testProxyUrl, testSumoLogger.proxyUrl, "proxy url specified, should be specified value")
@@ -262,7 +262,7 @@ func TestDriversLogOpts (t *testing.T) {
         logOptServerName: testServerName,
         logOptGzipCompression: strconv.FormatBool(testGzipCompression),
         logOptGzipCompressionLevel: "2o",
-        logOptSendingFrequency: testSendingFrequency.String(),
+        logOptSendingInterval: testSendingInterval.String(),
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
@@ -278,7 +278,7 @@ func TestDriversLogOpts (t *testing.T) {
     assert.Equal(t, testHttpSourceUrl, testSumoLogger.httpSourceUrl, "http source url should be configured correctly")
     assert.Equal(t, testGzipCompression, testSumoLogger.gzipCompression, "compression specified, should be specified value")
     assert.Equal(t, defaultGzipCompressionLevel, testSumoLogger.gzipCompressionLevel, "compression level specified incorrectly, should be default value")
-    assert.Equal(t, testSendingFrequency, testSumoLogger.sendingFrequency, "sending frequency specified, should be specified value")
+    assert.Equal(t, testSendingInterval, testSumoLogger.sendingInterval, "sending interval specified, should be specified value")
     assert.Equal(t, testQueueSize, cap(testSumoLogger.logQueue), "queue size specified, should be specified value")
     assert.Equal(t, testBatchSize, testSumoLogger.batchSize, "batch size specified, should be specified value")
     assert.Equal(t, testProxyUrl, testSumoLogger.proxyUrl, "proxy url specified, should be specified value")
@@ -294,7 +294,7 @@ func TestDriversLogOpts (t *testing.T) {
         logOptServerName: testServerName,
         logOptGzipCompression: strconv.FormatBool(testGzipCompression),
         logOptGzipCompressionLevel: "20",
-        logOptSendingFrequency: testSendingFrequency.String(),
+        logOptSendingInterval: testSendingInterval.String(),
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
@@ -310,14 +310,14 @@ func TestDriversLogOpts (t *testing.T) {
     assert.Equal(t, testHttpSourceUrl, testSumoLogger.httpSourceUrl, "http source url should be configured correctly")
     assert.Equal(t, testGzipCompression, testSumoLogger.gzipCompression, "compression specified, should be specified value")
     assert.Equal(t, defaultGzipCompressionLevel, testSumoLogger.gzipCompressionLevel, "compression level specified incorrectly, should be default value")
-    assert.Equal(t, testSendingFrequency, testSumoLogger.sendingFrequency, "sending frequency specified, should be specified value")
+    assert.Equal(t, testSendingInterval, testSumoLogger.sendingInterval, "sending interval specified, should be specified value")
     assert.Equal(t, testQueueSize, cap(testSumoLogger.logQueue), "queue size specified, should be specified value")
     assert.Equal(t, testBatchSize, testSumoLogger.batchSize, "batch size specified, should be specified value")
     assert.Equal(t, testProxyUrl, testSumoLogger.proxyUrl, "proxy url specified, should be specified value")
     assert.Equal(t, testTlsConfig, testSumoLogger.tlsConfig, "tls config options specified, should be specified value")
   })
 
-  t.Run("startLoggingInternal with bad sending frequency", func(t *testing.T) {
+  t.Run("startLoggingInternal with bad sending interval", func(t *testing.T) {
     info := logger.Info{
       Config: map[string]string{
         logOptUrl: testHttpSourceUrl,
@@ -326,7 +326,7 @@ func TestDriversLogOpts (t *testing.T) {
         logOptServerName: testServerName,
         logOptGzipCompression: strconv.FormatBool(testGzipCompression),
         logOptGzipCompressionLevel: strconv.Itoa(testGzipCompressionLevel),
-        logOptSendingFrequency: "72h3n0.5s",
+        logOptSendingInterval: "72h3n0.5s",
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
@@ -342,14 +342,14 @@ func TestDriversLogOpts (t *testing.T) {
     assert.Equal(t, testHttpSourceUrl, testSumoLogger.httpSourceUrl, "http source url should be configured correctly")
     assert.Equal(t, testGzipCompression, testSumoLogger.gzipCompression, "compression specified, should be specified value")
     assert.Equal(t, testGzipCompressionLevel, testSumoLogger.gzipCompressionLevel, "compression level specified, should be specified value")
-    assert.Equal(t, defaultSendingFrequency, testSumoLogger.sendingFrequency, "sending frequency specified incorrectly, should be default value")
+    assert.Equal(t, defaultSendingInterval, testSumoLogger.sendingInterval, "sending interval specified incorrectly, should be default value")
     assert.Equal(t, testQueueSize, cap(testSumoLogger.logQueue), "queue size specified, should be specified value")
     assert.Equal(t, testBatchSize, testSumoLogger.batchSize, "batch size specified, should be specified value")
     assert.Equal(t, testProxyUrl, testSumoLogger.proxyUrl, "proxy url specified, should be specified value")
     assert.Equal(t, testTlsConfig, testSumoLogger.tlsConfig, "tls config options specified, should be specified value")
   })
 
-  t.Run("startLoggingInternal with unsupported sending frequency", func(t *testing.T) {
+  t.Run("startLoggingInternal with unsupported sending interval", func(t *testing.T) {
     info := logger.Info{
       Config: map[string]string{
         logOptUrl: testHttpSourceUrl,
@@ -358,7 +358,7 @@ func TestDriversLogOpts (t *testing.T) {
         logOptServerName: testServerName,
         logOptGzipCompression: strconv.FormatBool(testGzipCompression),
         logOptGzipCompressionLevel: strconv.Itoa(testGzipCompressionLevel),
-        logOptSendingFrequency: "0s",
+        logOptSendingInterval: "0s",
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
@@ -374,7 +374,7 @@ func TestDriversLogOpts (t *testing.T) {
     assert.Equal(t, testHttpSourceUrl, testSumoLogger.httpSourceUrl, "http source url should be configured correctly")
     assert.Equal(t, testGzipCompression, testSumoLogger.gzipCompression, "compression specified, should be specified value")
     assert.Equal(t, testGzipCompressionLevel, testSumoLogger.gzipCompressionLevel, "compression level specified, should be specified value")
-    assert.Equal(t, defaultSendingFrequency, testSumoLogger.sendingFrequency, "sending frequency specified incorrectly, should be default value")
+    assert.Equal(t, defaultSendingInterval, testSumoLogger.sendingInterval, "sending interval specified incorrectly, should be default value")
     assert.Equal(t, testQueueSize, cap(testSumoLogger.logQueue), "queue size specified, should be specified value")
     assert.Equal(t, testBatchSize, testSumoLogger.batchSize, "batch size specified, should be specified value")
     assert.Equal(t, testProxyUrl, testSumoLogger.proxyUrl, "proxy url specified, should be specified value")
@@ -390,7 +390,7 @@ func TestDriversLogOpts (t *testing.T) {
         logOptServerName: testServerName,
         logOptGzipCompression: strconv.FormatBool(testGzipCompression),
         logOptGzipCompressionLevel: strconv.Itoa(testGzipCompressionLevel),
-        logOptSendingFrequency: testSendingFrequency.String(),
+        logOptSendingInterval: testSendingInterval.String(),
         logOptQueueSize: "2ooo",
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
@@ -406,7 +406,7 @@ func TestDriversLogOpts (t *testing.T) {
     assert.Equal(t, testHttpSourceUrl, testSumoLogger.httpSourceUrl, "http source url should be configured correctly")
     assert.Equal(t, testGzipCompression, testSumoLogger.gzipCompression, "compression specified, should be specified value")
     assert.Equal(t, testGzipCompressionLevel, testSumoLogger.gzipCompressionLevel, "compression level specified, should be specified value")
-    assert.Equal(t, testSendingFrequency, testSumoLogger.sendingFrequency, "sending frequency specified, should be specified value")
+    assert.Equal(t, testSendingInterval, testSumoLogger.sendingInterval, "sending interval specified, should be specified value")
     assert.Equal(t, defaultQueueSize, cap(testSumoLogger.logQueue), "queue size specified incorrectly, should be default value")
     assert.Equal(t, testBatchSize, testSumoLogger.batchSize, "batch size specified, should be specified value")
     assert.Equal(t, testProxyUrl, testSumoLogger.proxyUrl, "proxy url specified, should be specified value")
@@ -422,7 +422,7 @@ func TestDriversLogOpts (t *testing.T) {
         logOptServerName: testServerName,
         logOptGzipCompression: strconv.FormatBool(testGzipCompression),
         logOptGzipCompressionLevel: strconv.Itoa(testGzipCompressionLevel),
-        logOptSendingFrequency: testSendingFrequency.String(),
+        logOptSendingInterval: testSendingInterval.String(),
         logOptQueueSize: "-2000",
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
@@ -438,7 +438,7 @@ func TestDriversLogOpts (t *testing.T) {
     assert.Equal(t, testHttpSourceUrl, testSumoLogger.httpSourceUrl, "http source url should be configured correctly")
     assert.Equal(t, testGzipCompression, testSumoLogger.gzipCompression, "compression specified, should be specified value")
     assert.Equal(t, testGzipCompressionLevel, testSumoLogger.gzipCompressionLevel, "compression level specified, should be specified value")
-    assert.Equal(t, testSendingFrequency, testSumoLogger.sendingFrequency, "sending frequency specified, should be specified value")
+    assert.Equal(t, testSendingInterval, testSumoLogger.sendingInterval, "sending interval specified, should be specified value")
     assert.Equal(t, defaultQueueSize, cap(testSumoLogger.logQueue), "queue size specified incorrectly, should be default value")
     assert.Equal(t, testBatchSize, testSumoLogger.batchSize, "batch size specified, should be specified value")
     assert.Equal(t, testProxyUrl, testSumoLogger.proxyUrl, "proxy url specified, should be specified value")
@@ -454,7 +454,7 @@ func TestDriversLogOpts (t *testing.T) {
         logOptServerName: testServerName,
         logOptGzipCompression: strconv.FormatBool(testGzipCompression),
         logOptGzipCompressionLevel: strconv.Itoa(testGzipCompressionLevel),
-        logOptSendingFrequency: testSendingFrequency.String(),
+        logOptSendingInterval: testSendingInterval.String(),
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: "2ooo",
       },
@@ -470,7 +470,7 @@ func TestDriversLogOpts (t *testing.T) {
     assert.Equal(t, testHttpSourceUrl, testSumoLogger.httpSourceUrl, "http source url should be configured correctly")
     assert.Equal(t, testGzipCompression, testSumoLogger.gzipCompression, "compression specified, should be specified value")
     assert.Equal(t, testGzipCompressionLevel, testSumoLogger.gzipCompressionLevel, "compression level specified, should be specified value")
-    assert.Equal(t, testSendingFrequency, testSumoLogger.sendingFrequency, "sending frequency specified, should be specified value")
+    assert.Equal(t, testSendingInterval, testSumoLogger.sendingInterval, "sending interval specified, should be specified value")
     assert.Equal(t, testQueueSize, cap(testSumoLogger.logQueue), "queue size specified, should be specified value")
     assert.Equal(t, defaultBatchSize, testSumoLogger.batchSize, "batch size specified incorrectly, should be default value")
     assert.Equal(t, testProxyUrl, testSumoLogger.proxyUrl, "proxy url specified, should be specified value")
@@ -486,7 +486,7 @@ func TestDriversLogOpts (t *testing.T) {
         logOptServerName: testServerName,
         logOptGzipCompression: strconv.FormatBool(testGzipCompression),
         logOptGzipCompressionLevel: strconv.Itoa(testGzipCompressionLevel),
-        logOptSendingFrequency: testSendingFrequency.String(),
+        logOptSendingInterval: testSendingInterval.String(),
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: "-2000",
       },
@@ -502,7 +502,7 @@ func TestDriversLogOpts (t *testing.T) {
     assert.Equal(t, testHttpSourceUrl, testSumoLogger.httpSourceUrl, "http source url should be configured correctly")
     assert.Equal(t, testGzipCompression, testSumoLogger.gzipCompression, "compression specified, should be specified value")
     assert.Equal(t, testGzipCompressionLevel, testSumoLogger.gzipCompressionLevel, "compression level specified, should be specified value")
-    assert.Equal(t, testSendingFrequency, testSumoLogger.sendingFrequency, "sending frequency specified, should be specified value")
+    assert.Equal(t, testSendingInterval, testSumoLogger.sendingInterval, "sending interval specified, should be specified value")
     assert.Equal(t, testQueueSize, cap(testSumoLogger.logQueue), "queue size specified, should be specified value")
     assert.Equal(t, defaultBatchSize, testSumoLogger.batchSize, "batch size specified incorrectly, should be default value")
     assert.Equal(t, testProxyUrl, testSumoLogger.proxyUrl, "proxy url specified, should be specified value")

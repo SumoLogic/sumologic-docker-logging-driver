@@ -29,7 +29,7 @@ const (
   defaultInsecureSkipVerify = false
   defaultGzipCompression = false
   defaultGzipCompressionLevel = gzip.DefaultCompression
-  defaultSendingFrequency  = 2 * time.Second
+  defaultSendingInterval  = 2 * time.Second
   defaultQueueSize = 4000
   defaultBatchSize = 1000
 
@@ -39,7 +39,7 @@ const (
   logOptInsecureSkipVerify = "sumo-insecure-skip-verify"
   logOptRootCaPath = "sumo-root-ca-path"
   logOptServerName = "sumo-server-name"
-  logOptSendingFrequency = "sumo-sending-frequency"
+  logOptSendingInterval = "sumo-sending-interval"
   logOptQueueSize = "sumo-queue-size"
   logOptBatchSize = "sumo-batch-size"
 
@@ -75,7 +75,7 @@ type sumoLogger struct {
 
   inputQueueFile io.ReadWriteCloser
   logQueue chan *sumoLog
-  sendingFrequency time.Duration
+  sendingInterval time.Duration
   batchSize int
 }
 
@@ -147,10 +147,10 @@ func (sumoDriver *sumoDriver) startLoggingInternal(file string, info logger.Info
     Transport: transport,
   }
 
-  sendingFrequency := parseLogOptDuration(info, logOptSendingFrequency, defaultSendingFrequency)
-  if sendingFrequency <= 0 {
-    logrus.Error(fmt.Errorf("%s must be a positive duration. Using default duration.", logOptSendingFrequency))
-    sendingFrequency = defaultSendingFrequency
+  sendingInterval := parseLogOptDuration(info, logOptSendingInterval, defaultSendingInterval)
+  if sendingInterval <= 0 {
+    logrus.Error(fmt.Errorf("%s must be a positive duration. Using default duration.", logOptSendingInterval))
+    sendingInterval = defaultSendingInterval
   }
   queueSize := parseLogOptInt(info, logOptQueueSize, defaultQueueSize)
   if queueSize <= 0 {
@@ -172,7 +172,7 @@ func (sumoDriver *sumoDriver) startLoggingInternal(file string, info logger.Info
     gzipCompression: gzipCompression,
     gzipCompressionLevel: gzipCompressionLevel,
     logQueue: make(chan *sumoLog, queueSize),
-    sendingFrequency: sendingFrequency,
+    sendingInterval: sendingInterval,
     batchSize: batchSize,
   }
 
@@ -222,7 +222,7 @@ func consumeLogsFromFile(sumoLogger *sumoLogger) {
 }
 
 func queueLogsForSending(sumoLogger *sumoLogger) {
-  timer := time.NewTicker(sumoLogger.sendingFrequency)
+  timer := time.NewTicker(sumoLogger.sendingInterval)
   var logs []*sumoLog
   for {
     select {

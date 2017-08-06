@@ -57,7 +57,7 @@ func TestConsumeLogsFromFifo(t *testing.T) {
     httpClient: NewMockHttpClient(http.StatusOK),
     inputQueueFile: inputQueueFile,
     logQueue: make(chan *sumoLog, 4000),
-    sendingFrequency: 5 * time.Second,
+    sendingInterval: 5 * time.Second,
   }
 
   go consumeLogsFromFile(testSumoLogger)
@@ -100,7 +100,7 @@ func TestQueueLogsForSending(t *testing.T) {
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
       logQueue: testLogQueue,
-      sendingFrequency: 2 * time.Second,
+      sendingInterval: 2 * time.Second,
       batchSize: 1,
     }
     go queueLogsForSending(testSumoLogger)
@@ -127,7 +127,7 @@ func TestQueueLogsForSending(t *testing.T) {
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
       logQueue: testLogQueue,
-      sendingFrequency: 2 * time.Second,
+      sendingInterval: 2 * time.Second,
       batchSize: testBatchSize,
     }
     go queueLogsForSending(testSumoLogger)
@@ -156,7 +156,7 @@ func TestQueueLogsForSending(t *testing.T) {
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
       logQueue: testLogQueue,
-      sendingFrequency: 2 * time.Second,
+      sendingInterval: 2 * time.Second,
       batchSize: testBatchSize,
     }
     go queueLogsForSending(testSumoLogger)
@@ -186,7 +186,7 @@ func TestSendLogs(t *testing.T) {
     httpSourceUrl: testHttpSourceUrl,
     httpClient: testClient,
     logQueue: testLogQueue,
-    sendingFrequency: defaultSendingFrequency,
+    sendingInterval: defaultSendingInterval,
     batchSize: 10,
   }
 
@@ -233,7 +233,7 @@ func TestMakePostRequest(t *testing.T) {
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
       logQueue: testLogQueue,
-      sendingFrequency: defaultSendingFrequency,
+      sendingInterval: defaultSendingInterval,
       batchSize: defaultBatchSize,
     }
 
@@ -256,7 +256,7 @@ func TestMakePostRequest(t *testing.T) {
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
       logQueue: testLogQueue,
-      sendingFrequency: defaultSendingFrequency,
+      sendingInterval: defaultSendingInterval,
       batchSize: defaultBatchSize,
     }
 
@@ -282,7 +282,7 @@ func TestMakePostRequest(t *testing.T) {
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
       logQueue: testLogQueue,
-      sendingFrequency: defaultSendingFrequency,
+      sendingInterval: defaultSendingInterval,
       batchSize: defaultBatchSize,
     }
 
@@ -305,7 +305,7 @@ func TestMakePostRequest(t *testing.T) {
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
       logQueue: testLogQueue,
-      sendingFrequency: defaultSendingFrequency,
+      sendingInterval: defaultSendingInterval,
       batchSize: defaultBatchSize,
     }
 
@@ -331,7 +331,7 @@ func TestMakePostRequest(t *testing.T) {
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
       logQueue: testLogQueue,
-      sendingFrequency: defaultSendingFrequency,
+      sendingInterval: defaultSendingInterval,
       batchSize: defaultBatchSize,
     }
 
