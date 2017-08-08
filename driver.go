@@ -26,22 +26,43 @@ import (
 )
 
 const (
-  defaultInsecureSkipVerify = false
+  /* Log options that user can set via log-opt flag when starting container. */
+  /* HTTP source URL for the SumoLogic HTTP source the logs should be sent to. This option is required. */
+  logOptUrl = "sumo-url"
+  /* Gzip compression. If set to true, messages will be compressed before sending to Sumo. */
+  logOptGzipCompression = "sumo-compress"
+  /* Gzip compression level.
+    Valid values are -1 (default), 0 (no compression), 1 (best speed) ... 9 (best compression). */
+  logOptGzipCompressionLevel = "sumo-compress-level"
+  /* Used for TLS configuration.
+    Allows users to set a proxy URL. */
+  logOptProxyUrl = "sumo-proxy-url"
+  /* Used for TLS configuration.
+    If set to true, TLS will not perform verification on the certificate presented by the server. */
+  logOptInsecureSkipVerify = "sumo-insecure-skip-verify"
+  /* Used for TLS configuration.
+    Allows users to specify the path to a custom root certificate. */
+  logOptRootCaPath = "sumo-root-ca-path"
+  /* Used for TLS configuration.
+    Allows users to specify server name with which to validate the server certificate. */
+  logOptServerName = "sumo-server-name"
+  /* The maximum time the driver waits for number of logs to reach the batch size before sending logs,
+    even if the number of logs is less than the batch size. */
+  logOptSendingInterval = "sumo-sending-interval"
+  /* The maximum number of pending logs the container can send to the driver
+    before the driver must ingest them. */
+  logOptQueueSize = "sumo-queue-size"
+  /* The number of logs the driver should wait for before sending them in a batch.
+    If the number of logs never reaches the batch size, the driver will send the logs in smaller
+    batches at predefined intervals; see sending interval. */
+  logOptBatchSize = "sumo-batch-size"
+
   defaultGzipCompression = false
   defaultGzipCompressionLevel = gzip.DefaultCompression
+  defaultInsecureSkipVerify = false
   defaultSendingInterval  = 2 * time.Second
   defaultQueueSize = 4000
   defaultBatchSize = 1000
-
-  logOptGzipCompression = "sumo-compress"
-  logOptGzipCompressionLevel = "sumo-compress-level"
-  logOptProxyUrl = "sumo-proxy-url"
-  logOptInsecureSkipVerify = "sumo-insecure-skip-verify"
-  logOptRootCaPath = "sumo-root-ca-path"
-  logOptServerName = "sumo-server-name"
-  logOptSendingInterval = "sumo-sending-interval"
-  logOptQueueSize = "sumo-queue-size"
-  logOptBatchSize = "sumo-batch-size"
 
   fileMode = 0700
   fileReaderMaxSize = 1e6
@@ -148,18 +169,21 @@ func (sumoDriver *sumoDriver) startLoggingInternal(file string, info logger.Info
   }
 
   sendingInterval := parseLogOptDuration(info, logOptSendingInterval, defaultSendingInterval)
-  if sendingInterval <= 0 {
-    logrus.Error(fmt.Errorf("%s must be a positive duration. Using default duration.", logOptSendingInterval))
+  if sendingInterval <= time.ParseDuration("0s") {
+    logrus.Error(fmt.Errorf("%s must be a positive duration, got %s. Using default %s.",
+      logOptSendingInterval, sendingInterval.String(), defaultSendingInterval).String())
     sendingInterval = defaultSendingInterval
   }
   queueSize := parseLogOptInt(info, logOptQueueSize, defaultQueueSize)
   if queueSize <= 0 {
-    logrus.Error(fmt.Errorf("%s must be a positive value, got %d. Using default queue size.", logOptQueueSize, queueSize))
+    logrus.Error(fmt.Errorf("%s must be a positive value, got %d. Using default %d.",
+      logOptQueueSize, queueSize, defaultQueueSize))
     queueSize = defaultQueueSize
   }
   batchSize := parseLogOptInt(info, logOptBatchSize, defaultBatchSize)
   if batchSize <= 0 {
-    logrus.Error(fmt.Errorf("%s must be a positive value, got %d. Using default batch size.", logOptBatchSize, batchSize))
+    logrus.Error(fmt.Errorf("%s must be a positive value, got %d. Using default %d.",
+      logOptBatchSize, batchSize, defaultBatchSize))
     batchSize = defaultBatchSize
   }
 
