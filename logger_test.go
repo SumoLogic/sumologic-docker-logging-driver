@@ -40,7 +40,7 @@ func NewMockHttpClient(statusCode int) *mockHttpClient {
   }
 }
 
-func TestConsumeLogsFromFifo(t *testing.T) {
+func TestConsumeLogsFromFile(t *testing.T) {
   testLogMessage := &logdriver.LogEntry{
     Source: testSource,
     TimeNano: testTime,
@@ -86,7 +86,7 @@ func TestConsumeLogsFromFifo(t *testing.T) {
   })
 }
 
-func TestQueueLogsForSending(t *testing.T) {
+func TestBufferLogsForSending(t *testing.T) {
   testSumoLog := &sumoLog{
     source: testSource,
     line: testLine,
