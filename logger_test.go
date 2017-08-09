@@ -60,7 +60,7 @@ func TestConsumeLogsFromFifo(t *testing.T) {
     sendingInterval: 5 * time.Second,
   }
 
-  go consumeLogsFromFile(testSumoLogger)
+  go testSumoLogger.consumeLogsFromFile()
 
   enc := logdriver.NewLogEntryEncoder(inputQueueFile)
 
@@ -103,7 +103,7 @@ func TestQueueLogsForSending(t *testing.T) {
       sendingInterval: 2 * time.Second,
       batchSize: 1,
     }
-    go bufferLogsForSending(testSumoLogger)
+    go testSumoLogger.bufferLogsForSending()
 
     testLogQueue <- testSumoLog
     time.Sleep(time.Second)
@@ -130,7 +130,7 @@ func TestQueueLogsForSending(t *testing.T) {
       sendingInterval: 2 * time.Second,
       batchSize: testBatchSize,
     }
-    go bufferLogsForSending(testSumoLogger)
+    go testSumoLogger.bufferLogsForSending()
 
     testLogQueue <- testSumoLog
     time.Sleep(time.Second)
@@ -159,7 +159,7 @@ func TestQueueLogsForSending(t *testing.T) {
       sendingInterval: 2 * time.Second,
       batchSize: testBatchSize,
     }
-    go bufferLogsForSending(testSumoLogger)
+    go testSumoLogger.bufferLogsForSending()
 
     testLogQueue <- testSumoLog
     time.Sleep(time.Second)

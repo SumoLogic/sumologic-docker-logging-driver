@@ -110,8 +110,8 @@ func (sumoDriver *sumoDriver) StartLogging(file string, info logger.Info) error 
   if err != nil {
     return err
   }
-  go consumeLogsFromFile(newSumoLogger)
-  go bufferLogsForSending(newSumoLogger)
+  go newSumoLogger.consumeLogsFromFile()
+  go newSumoLogger.bufferLogsForSending()
   return nil
 }
 

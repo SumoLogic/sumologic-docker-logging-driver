@@ -24,7 +24,7 @@ const (
   stringToIntBitSize = 32
 )
 
-func consumeLogsFromFile(sumoLogger *sumoLogger) {
+func (sumoLogger *sumoLogger) consumeLogsFromFile() {
   dec := protoio.NewUint32DelimitedReader(sumoLogger.inputQueueFile, binary.BigEndian, fileReaderMaxSize)
   defer dec.Close()
   var buf logdriver.LogEntry
@@ -38,8 +38,6 @@ func consumeLogsFromFile(sumoLogger *sumoLogger) {
       logrus.Error(err)
       dec = protoio.NewUint32DelimitedReader(sumoLogger.inputQueueFile, binary.BigEndian, fileReaderMaxSize)
     }
-
-    // TODO: handle multi-line detection via Partial
     log := &sumoLog{
       line: buf.Line,
       source: buf.Source,
@@ -51,7 +49,7 @@ func consumeLogsFromFile(sumoLogger *sumoLogger) {
   }
 }
 
-func bufferLogsForSending(sumoLogger *sumoLogger) {
+func (sumoLogger *sumoLogger) bufferLogsForSending() {
   timer := time.NewTicker(sumoLogger.sendingInterval)
   var logsBuffer []*sumoLog
   for {
