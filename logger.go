@@ -51,42 +51,43 @@ func consumeLogsFromFile(sumoLogger *sumoLogger) {
   }
 }
 
-func queueLogsForSending(sumoLogger *sumoLogger) {
+func bufferLogsForSending(sumoLogger *sumoLogger) {
   timer := time.NewTicker(sumoLogger.sendingInterval)
-  var logs []*sumoLog
+  var logsBuffer []*sumoLog
   for {
     select {
     case <-timer.C:
-      logs = sumoLogger.sendLogs(logs)
+      logsBuffer = sumoLogger.sendLogs(logsBuffer)
     case log, open := <-sumoLogger.logQueue:
       if !open {
-        sumoLogger.sendLogs(logs)
+        sumoLogger.sendLogs(logsBuffer)
         return
       }
-      logs = append(logs, log)
-      if len(logs) % sumoLogger.batchSize == 0 {
-        logs = sumoLogger.sendLogs(logs)
+      logsBuffer = append(logsBuffer, log)
+      if len(logsBuffer) % sumoLogger.batchSize == 0 {
+        logsBuffer = sumoLogger.sendLogs(logsBuffer)
       }
     }
   }
 }
 
 func (sumoLogger *sumoLogger) sendLogs(logs []*sumoLog) []*sumoLog {
-  var failedLogs []*sumoLog
+  var failedLogsToRetry []*sumoLog
   logsCount := len(logs)
   for i := 0; i < logsCount; i += sumoLogger.batchSize {
     upperBound := i + sumoLogger.batchSize
     if upperBound > logsCount {
       upperBound = logsCount
     }
+    // TODO: exponential backoff here? using golang exponential backoff pkg
     if err := sumoLogger.makePostRequest(logs[i:upperBound]); err != nil {
       logrus.Error(err)
-      failedLogs = logs[i:logsCount]
-      return failedLogs
+      failedLogsToRetry = logs[i:logsCount]
+      return failedLogsToRetry
     }
   }
-  failedLogs = logs[:0]
-  return failedLogs
+  failedLogsToRetry = logs[:0]
+  return failedLogsToRetry
 }
 
 func (sumoLogger *sumoLogger) makePostRequest(logs []*sumoLog) error {
@@ -106,7 +107,6 @@ func (sumoLogger *sumoLogger) makePostRequest(logs []*sumoLog) error {
     }
   }
 
-  // TODO: error handling, retries and exponential backoff
   request, err := http.NewRequest("POST", sumoLogger.httpSourceUrl, bytes.NewBuffer(logsBatch.Bytes()))
   if err != nil {
     return err

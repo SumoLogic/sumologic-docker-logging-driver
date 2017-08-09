@@ -103,7 +103,7 @@ func TestQueueLogsForSending(t *testing.T) {
       sendingInterval: 2 * time.Second,
       batchSize: 1,
     }
-    go queueLogsForSending(testSumoLogger)
+    go bufferLogsForSending(testSumoLogger)
 
     testLogQueue <- testSumoLog
     time.Sleep(time.Second)
@@ -130,7 +130,7 @@ func TestQueueLogsForSending(t *testing.T) {
       sendingInterval: 2 * time.Second,
       batchSize: testBatchSize,
     }
-    go queueLogsForSending(testSumoLogger)
+    go bufferLogsForSending(testSumoLogger)
 
     testLogQueue <- testSumoLog
     time.Sleep(time.Second)
@@ -159,7 +159,7 @@ func TestQueueLogsForSending(t *testing.T) {
       sendingInterval: 2 * time.Second,
       batchSize: testBatchSize,
     }
-    go queueLogsForSending(testSumoLogger)
+    go bufferLogsForSending(testSumoLogger)
 
     testLogQueue <- testSumoLog
     time.Sleep(time.Second)

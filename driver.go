@@ -111,7 +111,7 @@ func (sumoDriver *sumoDriver) StartLogging(file string, info logger.Info) error 
     return err
   }
   go consumeLogsFromFile(newSumoLogger)
-  go queueLogsForSending(newSumoLogger)
+  go bufferLogsForSending(newSumoLogger)
   return nil
 }
 
