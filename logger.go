@@ -84,7 +84,6 @@ func (sumoLogger *sumoLogger) sendLogs(logs []*sumoLog) []*sumoLog {
       return failedLogsToRetry
     }
   }
-  failedLogsToRetry = logs[:0]
   return failedLogsToRetry
 }
 
