@@ -153,15 +153,21 @@ func (sumoLogger *sumoLogger) writeMessageGzipCompression(writer io.Writer, logs
   return nil
 }
 
-func parseLogOptInt(info logger.Info, logOptKey string, defaultValue int) int {
+func parseLogOptIntPositive(info logger.Info, logOptKey string, defaultValue int) int {
   if input, exists := info.Config[logOptKey]; exists {
-    inputValue, err := strconv.ParseInt(input, stringToIntBase, stringToIntBitSize)
+    inputValue64, err := strconv.ParseInt(input, stringToIntBase, stringToIntBitSize)
     if err != nil {
       logrus.Error(fmt.Errorf("Failed to parse value of %s as integer. Using default %d. %v",
         logOptKey, defaultValue, err))
       return defaultValue
     }
-    return int(inputValue)
+    inputValue := int(inputValue64)
+    if inputValue <= 0 {
+      logrus.Error(fmt.Errorf("%s must be a positive value, got %d. Using default %d.",
+        logOptKey, inputValue, defaultValue))
+      return defaultValue
+    }
+    return inputValue
   }
   return defaultValue
 }
@@ -172,6 +178,12 @@ func parseLogOptDuration(info logger.Info, logOptKey string, defaultValue time.D
     if err != nil {
       logrus.Error(fmt.Errorf("Failed to parse value of %s as duration. Using default %v. %v",
         logOptKey, defaultValue, err))
+      return defaultValue
+    }
+    zeroSeconds, _ := time.ParseDuration("0s")
+    if inputValue <= zeroSeconds {
+      logrus.Error(fmt.Errorf("%s must be a positive duration, got %s. Using default %s.",
+        logOptKey, inputValue.String(), defaultValue.String()))
       return defaultValue
     }
     return inputValue
@@ -198,6 +210,25 @@ func parseLogOptProxyUrl(info logger.Info, logOptKey string, defaultValue *url.U
     if err != nil {
       logrus.Error(fmt.Errorf("Failed to parse value of %s as url. Initializing without proxy. %v",
         logOptKey, defaultValue, err))
+      return defaultValue
+    }
+    return inputValue
+  }
+  return defaultValue
+}
+
+func parseLogOptGzipCompressionLevel(info logger.Info, logOptKey string, defaultValue int) int {
+  if input, exists := info.Config[logOptKey]; exists {
+    inputValue64, err := strconv.ParseInt(input, stringToIntBase, stringToIntBitSize)
+    if err != nil {
+      logrus.Error(fmt.Errorf("Failed to parse value of %s as integer. Using default %d. %v",
+        logOptKey, defaultValue, err))
+      return defaultValue
+    }
+    inputValue := int(inputValue64)
+    if inputValue < defaultValue || inputValue > gzip.BestCompression {
+      logrus.Error(fmt.Errorf("Not supported level '%d' for %s (supported values between %d and %d). Using default compression.",
+        inputValue, logOptKey, defaultValue, gzip.BestCompression))
       return defaultValue
     }
     return inputValue

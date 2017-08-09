@@ -16,7 +16,6 @@ import (
 
   "github.com/docker/docker/daemon/logger"
   "github.com/pkg/errors"
-  "github.com/sirupsen/logrus"
   "github.com/tonistiigi/fifo"
 )
 
@@ -129,12 +128,7 @@ func (sumoDriver *sumoDriver) startLoggingInternal(file string, info logger.Info
   }
 
   gzipCompression := parseLogOptBoolean(info, logOptGzipCompression, defaultGzipCompression)
-  gzipCompressionLevel := parseLogOptInt(info, logOptGzipCompressionLevel, defaultGzipCompressionLevel)
-  if gzipCompressionLevel < defaultGzipCompressionLevel || gzipCompressionLevel > gzip.BestCompression {
-    logrus.Error(fmt.Errorf("Not supported level '%s' for %s (supported values between %d and %d). Using default compression.",
-      info.Config[logOptGzipCompressionLevel], logOptGzipCompressionLevel, defaultGzipCompressionLevel, gzip.BestCompression))
-    gzipCompressionLevel = defaultGzipCompressionLevel
-  }
+  gzipCompressionLevel := parseLogOptGzipCompressionLevel(info, logOptGzipCompressionLevel, defaultGzipCompressionLevel)
 
   tlsConfig := &tls.Config{}
   tlsConfig.InsecureSkipVerify = parseLogOptBoolean(info, logOptInsecureSkipVerify, defaultInsecureSkipVerify)
@@ -161,24 +155,8 @@ func (sumoDriver *sumoDriver) startLoggingInternal(file string, info logger.Info
   }
 
   sendingInterval := parseLogOptDuration(info, logOptSendingInterval, defaultSendingInterval)
-  zeroSeconds, _ := time.ParseDuration("0s")
-  if sendingInterval <= zeroSeconds {
-    logrus.Error(fmt.Errorf("%s must be a positive duration, got %s. Using default %s.",
-      logOptSendingInterval, sendingInterval.String(), defaultSendingInterval.String()))
-    sendingInterval = defaultSendingInterval
-  }
-  queueSize := parseLogOptInt(info, logOptQueueSize, defaultQueueSize)
-  if queueSize <= 0 {
-    logrus.Error(fmt.Errorf("%s must be a positive value, got %d. Using default %d.",
-      logOptQueueSize, queueSize, defaultQueueSize))
-    queueSize = defaultQueueSize
-  }
-  batchSize := parseLogOptInt(info, logOptBatchSize, defaultBatchSize)
-  if batchSize <= 0 {
-    logrus.Error(fmt.Errorf("%s must be a positive value, got %d. Using default %d.",
-      logOptBatchSize, batchSize, defaultBatchSize))
-    batchSize = defaultBatchSize
-  }
+  queueSize := parseLogOptIntPositive(info, logOptQueueSize, defaultQueueSize)
+  batchSize := parseLogOptIntPositive(info, logOptBatchSize, defaultBatchSize)
 
   newSumoLogger := &sumoLogger{
     httpSourceUrl: info.Config[logOptUrl],
