@@ -56,9 +56,9 @@ const (
   defaultGzipCompression = true
   defaultGzipCompressionLevel = gzip.DefaultCompression
   defaultInsecureSkipVerify = false
-  defaultSendingInterval  = 2 * time.Second
-  defaultQueueSize = 100
-  defaultBatchSize = 1000000
+  defaultSendingIntervalMs = 2000 * time.Millisecond
+  defaultQueueSizeItems = 100
+  defaultBatchSizeBytes = 1000000
 
   fileMode = 0700
 )
@@ -146,9 +146,9 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
     Transport: transport,
   }
 
-  sendingInterval := parseLogOptDuration(info, logOptSendingInterval, defaultSendingInterval)
-  queueSize := parseLogOptIntPositive(info, logOptQueueSize, defaultQueueSize)
-  batchSize := parseLogOptIntPositive(info, logOptBatchSize, defaultBatchSize)
+  sendingInterval := parseLogOptDuration(info, logOptSendingInterval, defaultSendingIntervalMs)
+  queueSize := parseLogOptIntPositive(info, logOptQueueSize, defaultQueueSizeItems)
+  batchSize := parseLogOptIntPositive(info, logOptBatchSize, defaultBatchSizeBytes)
 
   /* https://github.com/containerd/fifo */
   inputFile, err := fifo.OpenFifo(context.Background(), file, syscall.O_RDONLY, fileMode)

@@ -34,14 +34,14 @@ func (m *mockHttpClient) Do(req *http.Request) (*http.Response, error) {
 
 func (m *mockHttpClient) Reset() {
   m.requestCount = 0
-  m.requestReceivedSignal = make(chan bool, defaultQueueSize)
+  m.requestReceivedSignal = make(chan bool, defaultQueueSizeItems)
 }
 
 func NewMockHttpClient(statusCode int) *mockHttpClient {
   return &mockHttpClient{
     requestCount: 0,
     statusCode: statusCode,
-    requestReceivedSignal: make(chan bool, defaultQueueSize),
+    requestReceivedSignal: make(chan bool, defaultQueueSizeItems),
   }
 }
 
@@ -60,8 +60,8 @@ func TestConsumeLogsFromFile(t *testing.T) {
   testSumoLogger := &sumoLogger{
     httpSourceUrl: testHttpSourceUrl,
     inputFile: inputFile,
-    logQueue: make(chan *sumoLog, defaultQueueSize),
-    logBatchQueue: make(chan []*sumoLog, defaultQueueSize),
+    logQueue: make(chan *sumoLog, defaultQueueSizeItems),
+    logBatchQueue: make(chan []*sumoLog, defaultQueueSizeItems),
     sendingInterval: time.Second,
   }
 
@@ -99,8 +99,8 @@ func TestBatchLogs(t *testing.T) {
   }
 
   t.Run("batchSize=1 byte", func(t *testing.T) {
-    testLogQueue := make(chan *sumoLog, 10 * defaultQueueSize)
-    testLogBatchQueue := make(chan []*sumoLog, defaultQueueSize)
+    testLogQueue := make(chan *sumoLog, 10 * defaultQueueSizeItems)
+    testLogBatchQueue := make(chan []*sumoLog, defaultQueueSizeItems)
     testSumoLogger := &sumoLogger{
       httpSourceUrl: testHttpSourceUrl,
       logQueue: testLogQueue,
@@ -127,8 +127,8 @@ func TestBatchLogs(t *testing.T) {
 
   t.Run("batchSize=10 bytes", func(t *testing.T) {
     testBatchSize := 10
-    testLogQueue := make(chan *sumoLog, 10 * defaultQueueSize)
-    testLogBatchQueue := make(chan []*sumoLog, defaultQueueSize)
+    testLogQueue := make(chan *sumoLog, 10 * defaultQueueSizeItems)
+    testLogBatchQueue := make(chan []*sumoLog, defaultQueueSizeItems)
     testSumoLogger := &sumoLogger{
       httpSourceUrl: testHttpSourceUrl,
       logQueue: testLogQueue,
@@ -155,8 +155,8 @@ func TestBatchLogs(t *testing.T) {
 
   t.Run("batchSize=1800 bytes", func(t *testing.T) {
     testBatchSize := 1800
-    testLogQueue := make(chan *sumoLog, 10 * defaultQueueSize)
-    testLogBatchQueue := make(chan []*sumoLog, defaultQueueSize)
+    testLogQueue := make(chan *sumoLog, 10 * defaultQueueSizeItems)
+    testLogBatchQueue := make(chan []*sumoLog, defaultQueueSizeItems)
     testSumoLogger := &sumoLogger{
       httpSourceUrl: testHttpSourceUrl,
       logQueue: testLogQueue,
@@ -245,8 +245,8 @@ func TestSendLogs(t *testing.T) {
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
       logBatchQueue: testLogBatchQueue,
-      sendingInterval: defaultSendingInterval,
-      batchSize: defaultBatchSize,
+      sendingInterval: defaultSendingIntervalMs,
+      batchSize: defaultBatchSizeBytes,
     }
 
     err := testSumoLogger.sendLogs(testLogs)
@@ -271,8 +271,8 @@ func TestSendLogs(t *testing.T) {
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
       logBatchQueue: testLogBatchQueue,
-      sendingInterval: defaultSendingInterval,
-      batchSize: defaultBatchSize,
+      sendingInterval: defaultSendingIntervalMs,
+      batchSize: defaultBatchSizeBytes,
     }
 
     err := testSumoLogger.sendLogs(testLogs)
@@ -294,8 +294,8 @@ func TestSendLogs(t *testing.T) {
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
       logBatchQueue: testLogBatchQueue,
-      sendingInterval: defaultSendingInterval,
-      batchSize: defaultBatchSize,
+      sendingInterval: defaultSendingIntervalMs,
+      batchSize: defaultBatchSizeBytes,
     }
 
     err := testSumoLogger.sendLogs(testLogs)
@@ -320,8 +320,8 @@ func TestSendLogs(t *testing.T) {
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
       logBatchQueue: testLogBatchQueue,
-      sendingInterval: defaultSendingInterval,
-      batchSize: defaultBatchSize,
+      sendingInterval: defaultSendingIntervalMs,
+      batchSize: defaultBatchSizeBytes,
     }
 
     err := testSumoLogger.sendLogs(testLogs)
