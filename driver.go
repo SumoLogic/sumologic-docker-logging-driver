@@ -49,7 +49,7 @@ const (
     in the event of network failure before we begin dropping batches. */
   logOptQueueSize = "sumo-queue-size"
   /* The number of bytes of logs the driver should wait for before sending them in a batch.
-    If the number of logs never reaches the batch size, the driver will send the logs in smaller
+    If the number of bytes never reaches the batch size, the driver will send the logs in smaller
     batches at predefined intervals; see sending interval. */
   logOptBatchSize = "sumo-batch-size"
 
