@@ -164,7 +164,7 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
     inputFile: inputFile,
     gzipCompression: gzipCompression,
     gzipCompressionLevel: gzipCompressionLevel,
-    logQueue: make(chan *sumoLog, queueSize),
+    logQueue: make(chan *sumoLog, 10 * queueSize),
     logBatchQueue: make(chan []*sumoLog, queueSize),
     sendingInterval: sendingInterval,
     batchSize: batchSize,

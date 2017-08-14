@@ -78,7 +78,7 @@ func TestConsumeLogsFromFile(t *testing.T) {
   })
 
   t.Run("Consume many logs", func(t *testing.T) {
-    testLogsCount := 1000
+    testLogsCount := 100
     for i := 0; i < testLogsCount; i++ {
       enc.Encode(testLogMessage)
     }
@@ -99,7 +99,7 @@ func TestBatchLogs(t *testing.T) {
   }
 
   t.Run("batchSize=1 byte", func(t *testing.T) {
-    testLogQueue := make(chan *sumoLog, defaultQueueSize)
+    testLogQueue := make(chan *sumoLog, 10 * defaultQueueSize)
     testLogBatchQueue := make(chan []*sumoLog, defaultQueueSize)
     testSumoLogger := &sumoLogger{
       httpSourceUrl: testHttpSourceUrl,
@@ -127,7 +127,7 @@ func TestBatchLogs(t *testing.T) {
 
   t.Run("batchSize=10 bytes", func(t *testing.T) {
     testBatchSize := 10
-    testLogQueue := make(chan *sumoLog, defaultQueueSize)
+    testLogQueue := make(chan *sumoLog, 10 * defaultQueueSize)
     testLogBatchQueue := make(chan []*sumoLog, defaultQueueSize)
     testSumoLogger := &sumoLogger{
       httpSourceUrl: testHttpSourceUrl,
@@ -155,7 +155,7 @@ func TestBatchLogs(t *testing.T) {
 
   t.Run("batchSize=1800 bytes", func(t *testing.T) {
     testBatchSize := 1800
-    testLogQueue := make(chan *sumoLog, defaultQueueSize)
+    testLogQueue := make(chan *sumoLog, 10 * defaultQueueSize)
     testLogBatchQueue := make(chan []*sumoLog, defaultQueueSize)
     testSumoLogger := &sumoLogger{
       httpSourceUrl: testHttpSourceUrl,
