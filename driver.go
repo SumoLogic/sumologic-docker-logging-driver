@@ -10,6 +10,7 @@ import (
   "io/ioutil"
   "net/http"
   "net/url"
+  "strconv"
   "sync"
   "syscall"
   "time"
@@ -17,6 +18,7 @@ import (
   "github.com/docker/docker/daemon/logger"
   "github.com/pkg/errors"
   "github.com/tonistiigi/fifo"
+  "github.com/sirupsen/logrus"
 )
 
 const (
@@ -43,20 +45,20 @@ const (
   /* The maximum time the driver waits for number of logs to reach the batch size before sending logs,
     even if the number of logs is less than the batch size. */
   logOptSendingInterval = "sumo-sending-interval"
-  /* The maximum number of pending logs the container can send to the driver
-    before the driver must ingest them. */
+  /* The maximum number of log batches of size sumo-batch-size we can store in memory
+    in the event of network failure before we begin dropping batches. */
   logOptQueueSize = "sumo-queue-size"
-  /* The number of logs the driver should wait for before sending them in a batch.
+  /* The number of bytes of logs the driver should wait for before sending them in a batch.
     If the number of logs never reaches the batch size, the driver will send the logs in smaller
     batches at predefined intervals; see sending interval. */
   logOptBatchSize = "sumo-batch-size"
 
-  defaultGzipCompression = false
+  defaultGzipCompression = true
   defaultGzipCompressionLevel = gzip.DefaultCompression
   defaultInsecureSkipVerify = false
   defaultSendingInterval  = 2 * time.Second
-  defaultQueueSize = 4000
-  defaultBatchSize = 1000
+  defaultQueueSize = 100
+  defaultBatchSize = 1000000
 
   fileMode = 0700
 )
@@ -85,17 +87,11 @@ type sumoLogger struct {
   gzipCompression bool
   gzipCompressionLevel int
 
-  inputQueueFile io.ReadWriteCloser
+  inputFile io.ReadWriteCloser
   logQueue chan *sumoLog
+  logBatchQueue chan []*sumoLog
   sendingInterval time.Duration
   batchSize int
-}
-
-type sumoLog struct {
-  line []byte
-  source string
-  time string
-  isPartial bool
 }
 
 func newSumoDriver() *sumoDriver {
@@ -105,27 +101,23 @@ func newSumoDriver() *sumoDriver {
 }
 
 func (sumoDriver *sumoDriver) StartLogging(file string, info logger.Info) error {
-  newSumoLogger, err := sumoDriver.startLoggingInternal(file, info)
+  newSumoLogger, err := sumoDriver.NewSumoLogger(file, info)
   if err != nil {
     return err
   }
   go newSumoLogger.consumeLogsFromFile()
-  go newSumoLogger.bufferLogsForSending()
+  go newSumoLogger.batchLogs()
+  go newSumoLogger.handleBatchedLogs()
   return nil
 }
 
-func (sumoDriver *sumoDriver) startLoggingInternal(file string, info logger.Info) (*sumoLogger, error) {
+func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sumoLogger, error) {
   sumoDriver.mu.Lock()
   if _, exists := sumoDriver.loggers[file]; exists {
     sumoDriver.mu.Unlock()
     return nil, fmt.Errorf("a logger for %q already exists", file)
   }
   sumoDriver.mu.Unlock()
-
-  inputQueueFile, err := fifo.OpenFifo(context.Background(), file, syscall.O_RDONLY, fileMode)
-  if err != nil {
-    return nil, errors.Wrapf(err, "error opening logger fifo: %q", file)
-  }
 
   gzipCompression := parseLogOptBoolean(info, logOptGzipCompression, defaultGzipCompression)
   gzipCompressionLevel := parseLogOptGzipCompressionLevel(info, logOptGzipCompressionLevel, defaultGzipCompressionLevel)
@@ -158,15 +150,22 @@ func (sumoDriver *sumoDriver) startLoggingInternal(file string, info logger.Info
   queueSize := parseLogOptIntPositive(info, logOptQueueSize, defaultQueueSize)
   batchSize := parseLogOptIntPositive(info, logOptBatchSize, defaultBatchSize)
 
+  /* https://github.com/containerd/fifo */
+  inputFile, err := fifo.OpenFifo(context.Background(), file, syscall.O_RDONLY, fileMode)
+  if err != nil {
+    return nil, errors.Wrapf(err, "error opening logger fifo: %q", file)
+  }
+
   newSumoLogger := &sumoLogger{
     httpSourceUrl: info.Config[logOptUrl],
     httpClient: httpClient,
     proxyUrl: proxyUrl,
     tlsConfig: tlsConfig,
-    inputQueueFile: inputQueueFile,
+    inputFile: inputFile,
     gzipCompression: gzipCompression,
     gzipCompressionLevel: gzipCompressionLevel,
     logQueue: make(chan *sumoLog, queueSize),
+    logBatchQueue: make(chan []*sumoLog, queueSize),
     sendingInterval: sendingInterval,
     batchSize: batchSize,
   }
@@ -182,9 +181,92 @@ func (sumoDriver *sumoDriver) StopLogging(file string) error {
   sumoDriver.mu.Lock()
   sumoLogger, exists := sumoDriver.loggers[file]
   if exists {
-    sumoLogger.inputQueueFile.Close()
+    sumoLogger.inputFile.Close()
     delete(sumoDriver.loggers, file)
   }
   sumoDriver.mu.Unlock()
   return nil
+}
+
+func parseLogOptIntPositive(info logger.Info, logOptKey string, defaultValue int) int {
+  if input, exists := info.Config[logOptKey]; exists {
+    inputValue64, err := strconv.ParseInt(input, stringToIntBase, stringToIntBitSize)
+    if err != nil {
+      logrus.Error(fmt.Errorf("Failed to parse value of %s as integer. Using default %d. %v",
+        logOptKey, defaultValue, err))
+      return defaultValue
+    }
+    inputValue := int(inputValue64)
+    if inputValue <= 0 {
+      logrus.Error(fmt.Errorf("%s must be a positive value, got %d. Using default %d.",
+        logOptKey, inputValue, defaultValue))
+      return defaultValue
+    }
+    return inputValue
+  }
+  return defaultValue
+}
+
+func parseLogOptDuration(info logger.Info, logOptKey string, defaultValue time.Duration) time.Duration {
+  if input, exists := info.Config[logOptKey]; exists {
+    inputValue, err := time.ParseDuration(input)
+    if err != nil {
+      logrus.Error(fmt.Errorf("Failed to parse value of %s as duration. Using default %v. %v",
+        logOptKey, defaultValue, err))
+      return defaultValue
+    }
+    zeroSeconds, _ := time.ParseDuration("0s")
+    if inputValue <= zeroSeconds {
+      logrus.Error(fmt.Errorf("%s must be a positive duration, got %s. Using default %s.",
+        logOptKey, inputValue.String(), defaultValue.String()))
+      return defaultValue
+    }
+    return inputValue
+  }
+  return defaultValue
+}
+
+func parseLogOptBoolean(info logger.Info, logOptKey string, defaultValue bool) bool {
+  if input, exists := info.Config[logOptKey]; exists {
+    inputValue, err := strconv.ParseBool(input)
+    if err != nil {
+      logrus.Error(fmt.Errorf("Failed to parse value of %s as boolean. Using default %t. %v",
+        logOptKey, defaultValue, err))
+      return defaultValue
+    }
+    return inputValue
+  }
+  return defaultValue
+}
+
+func parseLogOptProxyUrl(info logger.Info, logOptKey string, defaultValue *url.URL) *url.URL {
+  if input, exists := info.Config[logOptKey]; exists {
+    inputValue, err := url.Parse(input)
+    if err != nil {
+      logrus.Error(fmt.Errorf("Failed to parse value of %s as url. Initializing without proxy. %v",
+        logOptKey, defaultValue, err))
+      return defaultValue
+    }
+    return inputValue
+  }
+  return defaultValue
+}
+
+func parseLogOptGzipCompressionLevel(info logger.Info, logOptKey string, defaultValue int) int {
+  if input, exists := info.Config[logOptKey]; exists {
+    inputValue64, err := strconv.ParseInt(input, stringToIntBase, stringToIntBitSize)
+    if err != nil {
+      logrus.Error(fmt.Errorf("Failed to parse value of %s as integer. Using default %d. %v",
+        logOptKey, defaultValue, err))
+      return defaultValue
+    }
+    inputValue := int(inputValue64)
+    if inputValue < defaultValue || inputValue > gzip.BestCompression {
+      logrus.Error(fmt.Errorf("Not supported level '%d' for %s (supported values between %d and %d). Using default compression.",
+        inputValue, logOptKey, defaultValue, gzip.BestCompression))
+      return defaultValue
+    }
+    return inputValue
+  }
+  return defaultValue
 }

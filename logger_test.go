@@ -5,6 +5,7 @@ import (
   "compress/gzip"
   "context"
   "io/ioutil"
+  "math"
   "net/http"
   "os"
   "testing"
@@ -19,10 +20,12 @@ import (
 type mockHttpClient struct {
   requestCount int
   statusCode int
+  requestReceivedSignal chan bool
 }
 
 func (m *mockHttpClient) Do(req *http.Request) (*http.Response, error) {
   m.requestCount += 1
+  m.requestReceivedSignal <- true
   return &http.Response{
       Body: ioutil.NopCloser(bytes.NewBuffer([]byte("ERROR EXPECTED, mock response for testing"))),
       StatusCode: m.statusCode,
@@ -31,12 +34,14 @@ func (m *mockHttpClient) Do(req *http.Request) (*http.Response, error) {
 
 func (m *mockHttpClient) Reset() {
   m.requestCount = 0
+  m.requestReceivedSignal = make(chan bool, defaultQueueSize)
 }
 
 func NewMockHttpClient(statusCode int) *mockHttpClient {
   return &mockHttpClient{
     requestCount: 0,
     statusCode: statusCode,
+    requestReceivedSignal: make(chan bool, defaultQueueSize),
   }
 }
 
@@ -48,21 +53,21 @@ func TestConsumeLogsFromFile(t *testing.T) {
     Partial: testIsPartial,
   }
 
-  inputQueueFile, err := fifo.OpenFifo(context.Background(), filePath, unix.O_RDWR|unix.O_CREAT|unix.O_NONBLOCK, fileMode)
+  inputFile, err := fifo.OpenFifo(context.Background(), filePath, unix.O_RDWR|unix.O_CREAT|unix.O_NONBLOCK, fileMode)
   defer os.Remove(filePath)
   assert.Nil(t, err)
 
   testSumoLogger := &sumoLogger{
     httpSourceUrl: testHttpSourceUrl,
-    httpClient: NewMockHttpClient(http.StatusOK),
-    inputQueueFile: inputQueueFile,
-    logQueue: make(chan *sumoLog, 4000),
-    sendingInterval: 5 * time.Second,
+    inputFile: inputFile,
+    logQueue: make(chan *sumoLog, defaultQueueSize),
+    logBatchQueue: make(chan []*sumoLog, defaultQueueSize),
+    sendingInterval: time.Second,
   }
 
   go testSumoLogger.consumeLogsFromFile()
 
-  enc := logdriver.NewLogEntryEncoder(inputQueueFile)
+  enc := logdriver.NewLogEntryEncoder(inputFile)
 
   t.Run("Consume one log", func(t *testing.T) {
     enc.Encode(testLogMessage)
@@ -86,161 +91,145 @@ func TestConsumeLogsFromFile(t *testing.T) {
   })
 }
 
-func TestBufferLogsForSending(t *testing.T) {
+func TestBatchLogs(t *testing.T) {
   testSumoLog := &sumoLog{
     source: testSource,
     line: testLine,
     isPartial: testIsPartial,
   }
 
-  t.Run("batchSize=1", func(t *testing.T) {
-    testLogQueue := make(chan *sumoLog, 4000)
-    testClient := NewMockHttpClient(http.StatusOK)
+  t.Run("batchSize=1 byte", func(t *testing.T) {
+    testLogQueue := make(chan *sumoLog, defaultQueueSize)
+    testLogBatchQueue := make(chan []*sumoLog, defaultQueueSize)
     testSumoLogger := &sumoLogger{
       httpSourceUrl: testHttpSourceUrl,
-      httpClient: testClient,
       logQueue: testLogQueue,
+      logBatchQueue: testLogBatchQueue,
       sendingInterval: 2 * time.Second,
       batchSize: 1,
     }
-    go testSumoLogger.bufferLogsForSending()
+    go testSumoLogger.batchLogs()
 
     testLogQueue <- testSumoLog
-    time.Sleep(time.Second)
-    assert.Equal(t, 1, testClient.requestCount, "should have received one request")
-    testClient.Reset()
+    testLogBatch := <-testLogBatchQueue
+    assert.Equal(t, 1, len(testLogBatch), "should have received one batch from single log")
+    assert.Equal(t, testLine, testLogBatch[0].line, "should have received the correct log")
 
     testLogCount := 1000
     for i := 0; i < testLogCount; i++ {
       testLogQueue <- testSumoLog
     }
-    time.Sleep(time.Second)
-    assert.Equal(t, testLogCount, testClient.requestCount, "should have received %v requests", testLogCount)
-    testClient.Reset()
+    for i := 0; i < testLogCount; i++ {
+      <-testLogBatchQueue
+    }
+    assert.Equal(t, 0, len(testLogBatchQueue), "should have emptied out the batch queue")
   })
 
-  t.Run("batchSize=10", func(t *testing.T) {
-    testLogQueue := make(chan *sumoLog, 4000)
-    testClient := NewMockHttpClient(http.StatusOK)
+  t.Run("batchSize=10 bytes", func(t *testing.T) {
     testBatchSize := 10
+    testLogQueue := make(chan *sumoLog, defaultQueueSize)
+    testLogBatchQueue := make(chan []*sumoLog, defaultQueueSize)
     testSumoLogger := &sumoLogger{
       httpSourceUrl: testHttpSourceUrl,
-      httpClient: testClient,
       logQueue: testLogQueue,
-      sendingInterval: 2 * time.Second,
+      logBatchQueue: testLogBatchQueue,
+      sendingInterval: time.Hour,
       batchSize: testBatchSize,
     }
-    go testSumoLogger.bufferLogsForSending()
+    go testSumoLogger.batchLogs()
 
     testLogQueue <- testSumoLog
-    time.Sleep(time.Second)
-    assert.Equal(t, 0, testClient.requestCount,
-      "should have received no requests, fewer messages than batch size (timer should not have clicked in time)")
+    testLogBatch := <-testLogBatchQueue
+    assert.Equal(t, 1, len(testLogBatch), "should have received one batch from single log")
+    assert.Equal(t, testLine, testLogBatch[0].line, "should have received the correct log")
 
     testLogCount := 1000
     for i := 0; i < testLogCount; i++ {
       testLogQueue <- testSumoLog
     }
-    time.Sleep(2 * time.Second)
-    assert.Equal(t, testLogCount / testBatchSize + 1, testClient.requestCount,
-      "should have received (number of logs / batch size) requests, " +
-      "plus one for the single message we sent previously (timer should have clicked by now)")
-    testClient.Reset()
+    for i := 0; i < testLogCount; i++ {
+      <-testLogBatchQueue
+    }
+    assert.Equal(t, 0, len(testLogBatchQueue), "should have emptied out the batch queue")
   })
 
-  t.Run("batchSize=1000", func(t *testing.T) {
-    testLogQueue := make(chan *sumoLog, 4000)
-    testClient := NewMockHttpClient(http.StatusOK)
-    testBatchSize := 1000
+  t.Run("batchSize=1800 bytes", func(t *testing.T) {
+    testBatchSize := 1800
+    testLogQueue := make(chan *sumoLog, defaultQueueSize)
+    testLogBatchQueue := make(chan []*sumoLog, defaultQueueSize)
     testSumoLogger := &sumoLogger{
       httpSourceUrl: testHttpSourceUrl,
-      httpClient: testClient,
       logQueue: testLogQueue,
-      sendingInterval: 2 * time.Second,
+      logBatchQueue: testLogBatchQueue,
+      sendingInterval: time.Second,
       batchSize: testBatchSize,
     }
-    go testSumoLogger.bufferLogsForSending()
+    go testSumoLogger.batchLogs()
 
     testLogQueue <- testSumoLog
-    time.Sleep(time.Second)
-    assert.Equal(t, 0, testClient.requestCount,
-      "should have received no requests, fewer messages than batch size (timer should not have clicked in time)")
+    testLogBatch := <-testLogBatchQueue
+    assert.Equal(t, 1, len(testLogBatch), "should have received one batch from single log (expect timer to tick)")
+    assert.Equal(t, testLine, testLogBatch[0].line, "should have received the correct log")
 
     testLogCount := 1000
     for i := 0; i < testLogCount; i++ {
       testLogQueue <- testSumoLog
     }
-    time.Sleep(2 * time.Second)
-    assert.Equal(t, testLogCount / testBatchSize + 1, testClient.requestCount,
-      "should have received (number of logs / batch size) requests, " +
-      "plus one for the single message we sent previously (timer should have clicked by now)")
-    testClient.Reset()
+    for i := 0; i < len(testLine) * testLogCount / testBatchSize ; i++ {
+      <-testLogBatchQueue
+    }
+    assert.Equal(t, 0, len(testLogBatchQueue), "should have emptied out the batch queue")
   })
 }
 
-func TestSendLogs(t *testing.T) {
-  testLogQueue := make(chan *sumoLog, 4000)
-  var testLogs []*sumoLog
-  testClient := NewMockHttpClient(http.StatusOK)
-  testSumoLogger := &sumoLogger{
-    httpSourceUrl: testHttpSourceUrl,
-    httpClient: testClient,
-    logQueue: testLogQueue,
-    sendingInterval: defaultSendingInterval,
-    batchSize: 10,
-  }
-
-  testLog := &sumoLog{
+func TestHandleBatchedLogs(t *testing.T) {
+  testSumoLog := &sumoLog{
     source: testSource,
     line: testLine,
     isPartial: testIsPartial,
   }
+  testLogBatch := []*sumoLog{testSumoLog}
 
-  t.Run("logCount=0", func(t *testing.T) {
-    testLogs = testSumoLogger.sendLogs(testLogs)
-    assert.Equal(t, 0, len(testLogs), "should have no failed logs")
-    testClient.Reset()
-  })
-
-  t.Run("logCount=1", func(t *testing.T) {
-    testLogs = append(testLogs, testLog)
-    testLogs = testSumoLogger.sendLogs(testLogs)
-    assert.Equal(t, 0, len(testLogs), "should have no failed logs")
-    assert.Equal(t, 1, testClient.requestCount, "should have received one request")
-    testClient.Reset()
-  })
-
-  t.Run("logCount=100", func(t *testing.T) {
-    testLogsCount := 100
-    for i := 0; i < testLogsCount; i++ {
-      testLogs = append(testLogs, testLog)
-    }
-    testLogs = testSumoLogger.sendLogs(testLogs)
-    assert.Equal(t, 0, len(testLogs), "should have no failed logs")
-    assert.Equal(t, testLogsCount / testSumoLogger.batchSize, testClient.requestCount, "should have receieved one request per batch")
-    testClient.Reset()
-  })
-}
-
-func TestMakePostRequest(t *testing.T) {
-  testLogQueue := make(chan *sumoLog, 4000)
-
-  t.Run("logCount=0, status=OK", func(t *testing.T) {
-    var testLogs []*sumoLog
-
+  t.Run("status=OK", func (t *testing.T) {
+    testLogBatchQueue := make(chan []*sumoLog, 4000)
+    defer close(testLogBatchQueue)
     testClient := NewMockHttpClient(http.StatusOK)
     testSumoLogger := &sumoLogger{
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
-      logQueue: testLogQueue,
-      sendingInterval: defaultSendingInterval,
-      batchSize: defaultBatchSize,
+      logBatchQueue: testLogBatchQueue,
     }
-
-    err := testSumoLogger.makePostRequest(testLogs)
-    assert.Nil(t, err, "should be no errors sending logs")
-    assert.Equal(t, 0, testClient.requestCount, "should have received no requests")
+    go testSumoLogger.handleBatchedLogs()
+    testLogBatchQueue <- testLogBatch
+    <-testClient.requestReceivedSignal
+    assert.Equal(t, 0, len(testLogBatchQueue))
+    assert.Equal(t, 1, testClient.requestCount)
   })
+
+  t.Run("status=BadRequest", func (t *testing.T) {
+    testLogBatchQueue := make(chan []*sumoLog, 4000)
+    defer close(testLogBatchQueue)
+    testClient := NewMockHttpClient(http.StatusBadRequest)
+    testSumoLogger := &sumoLogger{
+      httpSourceUrl: testHttpSourceUrl,
+      httpClient: testClient,
+      logBatchQueue: testLogBatchQueue,
+    }
+    go testSumoLogger.handleBatchedLogs()
+    testLogBatchQueue <- testLogBatch
+    testRetryCount := 3
+    testElapsedTime := initialRetryInterval * time.Duration(math.Pow(retryMultiplier, float64(testRetryCount)))
+    time.Sleep(testElapsedTime)
+    for i := 0; i < testRetryCount + 1; i++ {
+      <-testClient.requestReceivedSignal
+    }
+    assert.Equal(t, 0, len(testLogBatchQueue))
+    assert.Equal(t, testRetryCount + 1, testClient.requestCount)
+  })
+}
+
+func TestSendLogs(t *testing.T) {
+  testLogBatchQueue := make(chan []*sumoLog, 4000)
 
   t.Run("logCount=1, status=OK", func(t *testing.T) {
     var testLogs []*sumoLog
@@ -255,12 +244,12 @@ func TestMakePostRequest(t *testing.T) {
     testSumoLogger := &sumoLogger{
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
-      logQueue: testLogQueue,
+      logBatchQueue: testLogBatchQueue,
       sendingInterval: defaultSendingInterval,
       batchSize: defaultBatchSize,
     }
 
-    err := testSumoLogger.makePostRequest(testLogs)
+    err := testSumoLogger.sendLogs(testLogs)
     assert.Nil(t, err, "should be no errors sending logs")
     assert.Equal(t, 1, testClient.requestCount, "should have received one request")
   })
@@ -281,12 +270,12 @@ func TestMakePostRequest(t *testing.T) {
     testSumoLogger := &sumoLogger{
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
-      logQueue: testLogQueue,
+      logBatchQueue: testLogBatchQueue,
       sendingInterval: defaultSendingInterval,
       batchSize: defaultBatchSize,
     }
 
-    err := testSumoLogger.makePostRequest(testLogs)
+    err := testSumoLogger.sendLogs(testLogs)
     assert.Nil(t, err, "should be no errors sending logs")
     assert.Equal(t, 1, testClient.requestCount, "should have received one request, logs are batched")
   })
@@ -304,12 +293,12 @@ func TestMakePostRequest(t *testing.T) {
     testSumoLogger := &sumoLogger{
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
-      logQueue: testLogQueue,
+      logBatchQueue: testLogBatchQueue,
       sendingInterval: defaultSendingInterval,
       batchSize: defaultBatchSize,
     }
 
-    err := testSumoLogger.makePostRequest(testLogs)
+    err := testSumoLogger.sendLogs(testLogs)
     assert.NotNil(t, err, "should be an error sending logs")
     assert.Equal(t, 1, testClient.requestCount, "should have received one request, logs are batched")
   })
@@ -330,12 +319,12 @@ func TestMakePostRequest(t *testing.T) {
     testSumoLogger := &sumoLogger{
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
-      logQueue: testLogQueue,
+      logBatchQueue: testLogBatchQueue,
       sendingInterval: defaultSendingInterval,
       batchSize: defaultBatchSize,
     }
 
-    err := testSumoLogger.makePostRequest(testLogs)
+    err := testSumoLogger.sendLogs(testLogs)
     assert.NotNil(t, err, "should be an error sending logs")
     assert.Equal(t, 1, testClient.requestCount, "should have received one request, logs are batched")
   })
