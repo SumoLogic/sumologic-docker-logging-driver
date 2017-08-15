@@ -39,14 +39,13 @@ To specify additional logging driver options, you can use the `--log-opt NAME=VA
 | `sumo-insecure-skip-verify` | No        | false         | Ignore server certificate validation. Boolean.
 | `sumo-root-ca-path`         | No        |               | Set the path to a custom root certificate.
 | `sumo-server-name`          | No        |               | Name used to validate the server certificate. By default, uses hostname of the `sumo-url`.
-| `sumo-queue-size`           | No        | 100           | The maximum number of log batches of size sumo-batch-size we can store in memory
-  in the event of network failure before we begin dropping batches.
+| `sumo-queue-size`           | No        | 100           | The maximum number of log batches of size sumo-batch-size we can store in memory in the event of network failure before we begin dropping batches.
 
 ```bash
 $ docker run --log-driver=sumologic \
     --log-opt sumo-url=https://example.sumologic.net/receiver/v1/http/token \
-    --log-opt sumo-batch-size=2000 \
-    --log-opt sumo-buffer-max=10000 \
+    --log-opt sumo-batch-size=2000000 \
+    --log-opt sumo-queue-size=400 \
     --log-opt sumo-sending-frequency=500ms \
     --log-opt sumo-compress=true \
     --log-opt ...
