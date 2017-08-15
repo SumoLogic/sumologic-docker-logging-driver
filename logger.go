@@ -116,8 +116,9 @@ func (sumoLogger *sumoLogger) handleBatchedLogs() {
     for {
       err := sumoLogger.sendLogs(logBatch)
       if err == nil {
-        time.Sleep(retryInterval)
+        break
       }
+      time.Sleep(retryInterval)
     }
   }
 }
