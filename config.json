@@ -1,6 +1,6 @@
 {
   "description": "Sumo Logic logging driver",
-  "documentation": "<insert link here>",
+  "documentation": "https://github.com/SumoLogic/docker-logging-driver/",
   "entrypoint": ["/usr/bin/docker-logging-driver"],
   "network": {
     "type": "host"
