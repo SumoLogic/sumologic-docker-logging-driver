@@ -7,6 +7,6 @@
   },
   "interface": {
     "types": ["docker.logdriver/1.0"],
-    "socket": "sumo-log-driver.sock"
+    "socket": "sumologic.sock"
   }
 }
