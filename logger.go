@@ -15,7 +15,9 @@ import (
 )
 
 const (
-  retryInterval = 5 * time.Second
+  maxRetryInterval = 30 * time.Second
+  initialRetryInterval = 500 * time.Millisecond
+  retryMultiplier = 2
 
   fileReaderMaxSize = 1e6
   stringToIntBase = 10
@@ -108,6 +110,7 @@ func (sumoLogger *sumoLogger) pushBatchToQueue(logBatch *sumoLogBatch) {
 }
 
 func (sumoLogger *sumoLogger) handleBatchedLogs() {
+  retryInterval := initialRetryInterval
   for {
     logBatch, open := <-sumoLogger.logBatchQueue
     if !open {
@@ -116,9 +119,16 @@ func (sumoLogger *sumoLogger) handleBatchedLogs() {
     for {
       err := sumoLogger.sendLogs(logBatch)
       if err == nil {
+        retryInterval = initialRetryInterval
         break
       }
       time.Sleep(retryInterval)
+      if retryInterval < maxRetryInterval {
+        retryInterval *= retryMultiplier
+        if retryInterval > maxRetryInterval {
+          retryInterval = maxRetryInterval
+        }
+      }
     }
   }
 }

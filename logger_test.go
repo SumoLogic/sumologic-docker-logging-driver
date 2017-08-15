@@ -4,6 +4,7 @@ import (
   "bytes"
   "context"
   "io/ioutil"
+  "math"
   "net/http"
   "os"
   "testing"
@@ -215,6 +216,27 @@ func TestHandleBatchedLogs(t *testing.T) {
     assert.Equal(t, 0, len(testLogBatchQueue))
     assert.Equal(t, 1, testClient.requestCount)
   })
+
+  t.Run("status=BadRequest", func (t *testing.T) {
+   testLogBatchQueue := make(chan []*sumoLog, 4000)
+   defer close(testLogBatchQueue)
+   testClient := NewMockHttpClient(http.StatusBadRequest)
+   testSumoLogger := &sumoLogger{
+     httpSourceUrl: testHttpSourceUrl,
+     httpClient: testClient,
+     logBatchQueue: testLogBatchQueue,
+   }
+   go testSumoLogger.handleBatchedLogs()
+   testLogBatchQueue <- testLogBatch
+   testRetryCount := 3
+   testElapsedTime := initialRetryInterval * time.Duration(math.Pow(retryMultiplier, float64(testRetryCount)))
+   time.Sleep(testElapsedTime)
+   for i := 0; i < testRetryCount + 1; i++ {
+     <-testClient.requestReceivedSignal
+   }
+   assert.Equal(t, 0, len(testLogBatchQueue))
+   assert.Equal(t, testRetryCount + 1, testClient.requestCount)
+ })
 }
 
 func TestSendLogs(t *testing.T) {
