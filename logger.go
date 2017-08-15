@@ -130,11 +130,6 @@ func (sumoLogger *sumoLogger) handleBatchedLogs() {
           retryInterval = maxRetryInterval
         }
       }
-      // if elapsedTime > maxElapsedTime {
-      //   elapsedTime = initialElapsedTime
-      //   logrus.Error(fmt.Errorf("could not send log batch after %s. Batch dropped.", maxElapsedTime.String()))
-      //   break
-      // }
     }
   }
 }
