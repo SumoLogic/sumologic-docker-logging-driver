@@ -17,7 +17,7 @@ const (
   filePath1 = "/tmp/test1"
   filePath2 = "/tmp/test2"
 
-  httpSourceUrl = "https://example.org"
+  testHttpSourceUrl = "https://example.org"
 
   testSource = "sumo-test"
   testTime = 1234567890
@@ -40,26 +40,26 @@ func TestDrivers (t *testing.T) {
 
   info := logger.Info{
     Config: map[string]string{
-      logOptUrl: httpSourceUrl,
+      logOptUrl: testHttpSourceUrl,
     },
     ContainerID: "containeriid",
   }
 
-  t.Run("startLoggingInternal", func(t *testing.T) {
+  t.Run("NewSumoLogger", func(t *testing.T) {
     testSumoDriver := newSumoDriver()
     assert.Equal(t, 0, len(testSumoDriver.loggers), "there should be no loggers when the driver is initialized")
 
-    testSumoLogger1, err := testSumoDriver.startLoggingInternal(filePath1, info)
+    testSumoLogger1, err := testSumoDriver.NewSumoLogger(filePath1, info)
     assert.Nil(t, err)
     assert.Equal(t, 1, len(testSumoDriver.loggers), "there should be one logger after calling StartLogging on driver")
     assert.Equal(t, info.Config[logOptUrl], testSumoLogger1.httpSourceUrl, "http source url should be configured correctly")
 
-    _, err = testSumoDriver.startLoggingInternal(filePath1, info)
+    _, err = testSumoDriver.NewSumoLogger(filePath1, info)
     assert.Error(t, err, "trying to call StartLogging for filepath that already exists should return error")
     assert.Equal(t, 1, len(testSumoDriver.loggers),
       "there should still be one logger after calling StartLogging for filepath that already exists")
 
-    testSumoLogger2, err := testSumoDriver.startLoggingInternal(filePath2, info)
+    testSumoLogger2, err := testSumoDriver.NewSumoLogger(filePath2, info)
     assert.Nil(t, err)
     assert.Equal(t, 2, len(testSumoDriver.loggers),
       "there should be two loggers now after calling StartLogging on driver for different filepaths")
@@ -81,7 +81,7 @@ func TestDrivers (t *testing.T) {
     assert.Nil(t, err, "trying to call StopLogging for nonexistent logger should NOT return error")
     assert.Equal(t, 0, len(testSumoDriver.loggers), "no loggers should be changed after calling StopLogging for nonexistent logger")
 
-    _, err = testSumoDriver.startLoggingInternal(filePath1, info)
+    _, err = testSumoDriver.NewSumoLogger(filePath1, info)
     assert.Nil(t, err)
     assert.Equal(t, 1, len(testSumoDriver.loggers), "there should be one logger after calling StartLogging on driver")
 
@@ -94,14 +94,14 @@ func TestDrivers (t *testing.T) {
     assert.Equal(t, 0, len(testSumoDriver.loggers), "calling StopLogging on existing logger should remove the logger")
   })
 
-  t.Run("startLoggingInternal, concurrently", func(t *testing.T) {
+  t.Run("NewSumoLogger, concurrently", func(t *testing.T) {
     testSumoDriver := newSumoDriver()
     assert.Equal(t, 0, len(testSumoDriver.loggers), "there should be no loggers when the driver is initialized")
 
     waitForAllLoggers := make(chan int)
     for i := 0; i < testLoggersCount; i++ {
       go func(i int) {
-        _, err := testSumoDriver.startLoggingInternal(filePath + strconv.Itoa(i + 1), info)
+        _, err := testSumoDriver.NewSumoLogger(filePath + strconv.Itoa(i + 1), info)
         assert.Nil(t, err)
         waitForAllLoggers <- i
       }(i)

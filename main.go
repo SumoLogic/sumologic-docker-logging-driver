@@ -11,8 +11,7 @@ import (
 
 const (
   // if you change the name here, don't forget to change it in config.json
-  pluginName = "sumo-log-driver"
-  logOptUrl = "sumo-url"
+  pluginName = "sumologic"
   startLoggingPath = "/LogDriver.StartLogging"
   stopLoggingPath = "/LogDriver.StopLogging"
 )
