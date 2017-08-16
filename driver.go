@@ -11,6 +11,7 @@ import (
 
   "github.com/docker/docker/daemon/logger"
   "github.com/pkg/errors"
+  "github.com/sirupsen/logrus"
   "github.com/tonistiigi/fifo"
 )
 
@@ -18,7 +19,7 @@ const (
   logOptUrl = "sumo-url"
 
   defaultSendingIntervalMs = 2000 * time.Millisecond
-  defaultQueueSizeItems = 500
+  defaultQueueSizeItems = 100
   defaultBatchSizeBytes = 1000000
 
   fileMode = 0700
@@ -107,6 +108,7 @@ func (sumoDriver *sumoDriver) StopLogging(file string) error {
   sumoDriver.mu.Lock()
   sumoLogger, exists := sumoDriver.loggers[file]
   if exists {
+    logrus.Info("stopping logging driver for closed container.")
     sumoLogger.inputFile.Close()
     delete(sumoDriver.loggers, file)
   }

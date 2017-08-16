@@ -31,19 +31,19 @@ type sumoLog struct {
 
 type sumoLogBatch struct {
   logs []*sumoLog
-  size int
+  sizeBytes int
 }
 
 func NewSumoLogBatch() *sumoLogBatch {
   return &sumoLogBatch{
     logs: nil,
-    size: 0,
+    sizeBytes: 0,
   }
 }
 
 func (sumoLogBatch *sumoLogBatch) Reset() {
   sumoLogBatch.logs = nil
-  sumoLogBatch.size = 0
+  sumoLogBatch.sizeBytes = 0
 }
 
 func (sumoLogger *sumoLogger) consumeLogsFromFile() {
@@ -84,8 +84,8 @@ func (sumoLogger *sumoLogger) batchLogs() {
         return
       }
       logBatch.logs = append(logBatch.logs, log)
-      logBatch.size += len(log.line)
-      if logBatch.size >= sumoLogger.batchSize {
+      logBatch.sizeBytes += len(log.line)
+      if logBatch.sizeBytes >= sumoLogger.batchSize {
         sumoLogger.pushBatchToQueue(logBatch)
       }
     case <-ticker.C:

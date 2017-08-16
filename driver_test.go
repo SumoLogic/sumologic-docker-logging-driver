@@ -2,11 +2,13 @@ package main
 
 import (
   "context"
+  "io/ioutil"
   "os"
   "strconv"
   "testing"
 
   "github.com/docker/docker/daemon/logger"
+  "github.com/sirupsen/logrus"
   "github.com/stretchr/testify/assert"
   "github.com/tonistiigi/fifo"
   "golang.org/x/sys/unix"
@@ -29,6 +31,7 @@ var (
 )
 
 func TestDrivers (t *testing.T) {
+  logrus.SetOutput(ioutil.Discard)
   testLoggersCount := 100
 
   for i := 0; i < testLoggersCount; i++ {
