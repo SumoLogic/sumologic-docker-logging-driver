@@ -6,6 +6,7 @@ import (
   "fmt"
   "io"
   "io/ioutil"
+  "math"
   "net/http"
   "time"
 
@@ -15,7 +16,7 @@ import (
 )
 
 const (
-  maxRetryInterval = 30 * time.Second
+  maxRetryInterval = 5 * time.Second
   initialRetryInterval = 500 * time.Millisecond
   retryMultiplier = 2
 
@@ -122,12 +123,11 @@ func (sumoLogger *sumoLogger) handleBatchedLogs() {
         retryInterval = initialRetryInterval
         break
       }
+      logrus.Info(fmt.Sprintf("Sleeping for %s before retry...", retryInterval.String()))
       time.Sleep(retryInterval)
       if retryInterval < maxRetryInterval {
-        retryInterval *= retryMultiplier
-        if retryInterval > maxRetryInterval {
-          retryInterval = maxRetryInterval
-        }
+        retryInterval = time.Duration(
+          math.Min(retryInterval.Seconds() * retryMultiplier, maxRetryInterval.Seconds())) * time.Second
       }
     }
   }

@@ -11,6 +11,7 @@ import (
   "time"
 
   "github.com/docker/docker/api/types/plugins/logdriver"
+  "github.com/sirupsen/logrus"
   "github.com/stretchr/testify/assert"
   "github.com/tonistiigi/fifo"
   "golang.org/x/sys/unix"
@@ -194,6 +195,7 @@ func TestBatchLogs(t *testing.T) {
 }
 
 func TestHandleBatchedLogs(t *testing.T) {
+  logrus.SetOutput(ioutil.Discard)
   testSumoLog := &sumoLog{
     source: testSource,
     line: testLine,
@@ -213,8 +215,10 @@ func TestHandleBatchedLogs(t *testing.T) {
     go testSumoLogger.handleBatchedLogs()
     testLogBatchQueue <- testLogBatch
     <-testClient.requestReceivedSignal
-    assert.Equal(t, 0, len(testLogBatchQueue))
-    assert.Equal(t, 1, testClient.requestCount)
+    assert.Equal(t, 0, len(testLogBatchQueue),
+      "should have emptied out the batch queue while handling")
+    assert.Equal(t, 1, testClient.requestCount,
+      "should have made only one HTTP request for the batch")
   })
 
   t.Run("status=BadRequest", func (t *testing.T) {
@@ -234,8 +238,10 @@ func TestHandleBatchedLogs(t *testing.T) {
    for i := 0; i < testRetryCount + 1; i++ {
      <-testClient.requestReceivedSignal
    }
-   assert.Equal(t, 0, len(testLogBatchQueue))
-   assert.Equal(t, testRetryCount + 1, testClient.requestCount)
+   assert.Equal(t, 0, len(testLogBatchQueue),
+     "should have emptied out the batch queue while handling")
+   assert.Equal(t, testRetryCount + 1, testClient.requestCount,
+     "should have made one HTTP request to start, plus one request per retry")
  })
 }
 
