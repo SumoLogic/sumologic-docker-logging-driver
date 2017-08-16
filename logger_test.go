@@ -113,23 +113,6 @@ func TestBatchLogs(t *testing.T) {
     testLogQueue <- testSumoLog
     time.Sleep(500 * time.Millisecond)
     assert.Equal(t, 0, len(testLogBatchQueue), "should have dropped the log for being too large")
-
-    // testLogBatch := <-testLogBatchQueue
-    // assert.Equal(t, 1, len(testLogBatch), "should have received one batch from single log")
-    // assert.Equal(t, testLine, testLogBatch[0].line, "should have received the correct log")
-    //
-    // testLogCount := 1000
-    // go func() {
-    //   for i := 0; i < testLogCount; i++ {
-    //     testLogQueue <- testSumoLog
-    //   }
-    // }()
-    // go func(t *testing.T) {
-    //   for i := 0; i < testLogCount; i++ {
-    //     <-testLogBatchQueue
-    //   }
-    //   assert.Equal(t, 0, len(testLogBatchQueue), "should have emptied out the batch queue")
-    // }(t)
   })
 
   t.Run("batchSize=18 bytes", func(t *testing.T) {
