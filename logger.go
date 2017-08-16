@@ -83,11 +83,15 @@ func (sumoLogger *sumoLogger) batchLogs() {
         close(sumoLogger.logBatchQueue)
         return
       }
-      logBatch.logs = append(logBatch.logs, log)
-      logBatch.sizeBytes += len(log.line)
-      if logBatch.sizeBytes >= sumoLogger.batchSize {
+      if len(log.line) > sumoLogger.batchSize {
+        logrus.Warn("Log is too large to batch, dropping log.")
+        continue
+      }
+      if logBatch.sizeBytes + len(log.line) > sumoLogger.batchSize {
         sumoLogger.pushBatchToQueue(logBatch)
       }
+      logBatch.logs = append(logBatch.logs, log)
+      logBatch.sizeBytes += len(log.line)
     case <-ticker.C:
       if len(logBatch.logs) > 0 {
         sumoLogger.pushBatchToQueue(logBatch)
@@ -104,6 +108,7 @@ func (sumoLogger *sumoLogger) pushBatchToQueue(logBatch *sumoLogBatch) {
     <-sumoLogger.logBatchQueue
     logrus.Error(fmt.Errorf("log batch queue full, dropping oldest batch"))
     sumoLogger.logBatchQueue <- logBatch.logs
+    logBatch.Reset()
   }
 }
 

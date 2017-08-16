@@ -10,6 +10,7 @@ import (
   "time"
 
   "github.com/docker/docker/api/types/plugins/logdriver"
+  "github.com/sirupsen/logrus"
   "github.com/stretchr/testify/assert"
   "github.com/tonistiigi/fifo"
   "golang.org/x/sys/unix"
@@ -90,6 +91,7 @@ func TestConsumeLogsFromFile(t *testing.T) {
 }
 
 func TestBatchLogs(t *testing.T) {
+  logrus.SetOutput(ioutil.Discard)
   testSumoLog := &sumoLog{
     source: testSource,
     line: testLine,
@@ -103,39 +105,42 @@ func TestBatchLogs(t *testing.T) {
       httpSourceUrl: testHttpSourceUrl,
       logQueue: testLogQueue,
       logBatchQueue: testLogBatchQueue,
-      sendingInterval: 2 * time.Second,
+      sendingInterval: 400 * time.Millisecond,
       batchSize: 1,
     }
     go testSumoLogger.batchLogs()
 
     testLogQueue <- testSumoLog
-    testLogBatch := <-testLogBatchQueue
-    assert.Equal(t, 1, len(testLogBatch), "should have received one batch from single log")
-    assert.Equal(t, testLine, testLogBatch[0].line, "should have received the correct log")
+    time.Sleep(500 * time.Millisecond)
+    assert.Equal(t, 0, len(testLogBatchQueue), "should have dropped the log for being too large")
 
-    testLogCount := 1000
-    go func() {
-      for i := 0; i < testLogCount; i++ {
-        testLogQueue <- testSumoLog
-      }
-    }()
-    go func(t *testing.T) {
-      for i := 0; i < testLogCount; i++ {
-        <-testLogBatchQueue
-      }
-      assert.Equal(t, 0, len(testLogBatchQueue), "should have emptied out the batch queue")
-    }(t)
+    // testLogBatch := <-testLogBatchQueue
+    // assert.Equal(t, 1, len(testLogBatch), "should have received one batch from single log")
+    // assert.Equal(t, testLine, testLogBatch[0].line, "should have received the correct log")
+    //
+    // testLogCount := 1000
+    // go func() {
+    //   for i := 0; i < testLogCount; i++ {
+    //     testLogQueue <- testSumoLog
+    //   }
+    // }()
+    // go func(t *testing.T) {
+    //   for i := 0; i < testLogCount; i++ {
+    //     <-testLogBatchQueue
+    //   }
+    //   assert.Equal(t, 0, len(testLogBatchQueue), "should have emptied out the batch queue")
+    // }(t)
   })
 
-  t.Run("batchSize=10 bytes", func(t *testing.T) {
-    testBatchSize := 10
+  t.Run("batchSize=18 bytes", func(t *testing.T) {
+    testBatchSize := 18
     testLogQueue := make(chan *sumoLog, 10 * defaultQueueSizeItems)
     testLogBatchQueue := make(chan []*sumoLog, defaultQueueSizeItems)
     testSumoLogger := &sumoLogger{
       httpSourceUrl: testHttpSourceUrl,
       logQueue: testLogQueue,
       logBatchQueue: testLogBatchQueue,
-      sendingInterval: time.Hour,
+      sendingInterval: time.Second,
       batchSize: testBatchSize,
     }
     go testSumoLogger.batchLogs()
