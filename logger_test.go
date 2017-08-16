@@ -68,7 +68,7 @@ func TestConsumeLogsFromFile(t *testing.T) {
 
   enc := logdriver.NewLogEntryEncoder(inputFile)
 
-  t.Run("logCount=1", func(t *testing.T) {
+  t.Run("testLogCount=1", func(t *testing.T) {
     enc.Encode(testLogMessage)
     consumedLog := <-testSumoLogger.logQueue
     assert.Equal(t, testSource, consumedLog.source, "should read the correct log source")
@@ -76,7 +76,7 @@ func TestConsumeLogsFromFile(t *testing.T) {
     assert.Equal(t, testIsPartial, consumedLog.isPartial, "should read the correct log partial")
   })
 
-  t.Run("logCount=100000", func(t *testing.T) {
+  t.Run("testLogCount=100000", func(t *testing.T) {
     testLogsCount := 100000
     go func() {
       for i := 0; i < testLogsCount; i++ {
@@ -117,7 +117,7 @@ func TestBatchLogs(t *testing.T) {
     assert.Equal(t, 0, len(testLogBatchQueue), "should have dropped the log for being too large")
   })
 
-  t.Run("batchSize=200 bytes, logCount=1", func(t *testing.T) {
+  t.Run("batchSize=200 bytes, testLogCount=1", func(t *testing.T) {
     testBatchSize := 200
     testLogQueue := make(chan *sumoLog, 100 * defaultQueueSizeItems)
     testLogBatchQueue := make(chan []*sumoLog, defaultQueueSizeItems)
@@ -137,7 +137,7 @@ func TestBatchLogs(t *testing.T) {
     assert.Equal(t, 0, len(testLogBatchQueue), "should have emptied out the batch queue")
   })
 
-  t.Run("batchSize=200 bytes, logCount=100000", func(t *testing.T) {
+  t.Run("batchSize=200 bytes, testLogCount=100000", func(t *testing.T) {
     testBatchSize := 200
     testLogQueue := make(chan *sumoLog, 100 * defaultQueueSizeItems)
     testLogBatchQueue := make(chan []*sumoLog, defaultQueueSizeItems)
@@ -150,13 +150,13 @@ func TestBatchLogs(t *testing.T) {
     }
     go testSumoLogger.batchLogs()
 
-    logCount := 100000
+    testLogCount := 100000
     go func() {
-      for i := 0; i < logCount; i++ {
+      for i := 0; i < testLogCount; i++ {
         testLogQueue <- testSumoLog
       }
     }()
-    for i := 0; i < logCount / (testBatchSize / len(testLine)); i++ {
+    for i := 0; i < testLogCount / (testBatchSize / len(testLine)); i++ {
       testLogBatch := <-testLogBatchQueue
       assert.Equal(t, testBatchSize / len(testLine), len(testLogBatch),
         "should have correct number of logs in a batch")
@@ -165,7 +165,7 @@ func TestBatchLogs(t *testing.T) {
     assert.Equal(t, 0, len(testLogBatchQueue), "should have emptied out the batch queue")
   })
 
-  t.Run("batchSize=2000000 bytes, logCount=1", func(t *testing.T) {
+  t.Run("batchSize=2000000 bytes, testLogCount=1", func(t *testing.T) {
     testBatchSize := 2000000
     testLogQueue := make(chan *sumoLog, 100 * defaultQueueSizeItems)
     testLogBatchQueue := make(chan []*sumoLog, defaultQueueSizeItems)
@@ -185,7 +185,7 @@ func TestBatchLogs(t *testing.T) {
     assert.Equal(t, 0, len(testLogBatchQueue), "should have emptied out the batch queue")
   })
 
-  t.Run("batchSize=2000000 bytes, logCount=1000000", func(t *testing.T) {
+  t.Run("batchSize=2000000 bytes, testLogCount=1000000", func(t *testing.T) {
     testBatchSize := 2000000
     testLogQueue := make(chan *sumoLog, 100 * defaultQueueSizeItems)
     testLogBatchQueue := make(chan []*sumoLog, defaultQueueSizeItems)
@@ -198,13 +198,13 @@ func TestBatchLogs(t *testing.T) {
     }
     go testSumoLogger.batchLogs()
 
-    logCount := 1000000
+    testLogCount := 1000000
     go func() {
-      for i := 0; i < logCount; i++ {
+      for i := 0; i < testLogCount; i++ {
         testLogQueue <- testSumoLog
       }
     }()
-    for i := 0; i < logCount / (testBatchSize / len(testLine)); i++ {
+    for i := 0; i < testLogCount / (testBatchSize / len(testLine)); i++ {
       testLogBatch := <-testLogBatchQueue
       assert.Equal(t, testBatchSize / len(testLine), len(testLogBatch),
         "should have correct number of logs in a batch")
@@ -242,7 +242,7 @@ func TestHandleBatchedLogs(t *testing.T) {
 func TestSendLogs(t *testing.T) {
   testLogBatchQueue := make(chan []*sumoLog, 4000)
 
-  t.Run("logCount=1, status=OK", func(t *testing.T) {
+  t.Run("testLogCount=1, status=OK", func(t *testing.T) {
     var testLogs []*sumoLog
     testLog := &sumoLog{
       source: testSource,
@@ -265,15 +265,15 @@ func TestSendLogs(t *testing.T) {
     assert.Equal(t, 1, testClient.requestCount, "should have received one request")
   })
 
-  t.Run("logCount=100000, status=OK", func(t *testing.T) {
-    logCount := 100000
+  t.Run("testLogCount=100000, status=OK", func(t *testing.T) {
+    testLogCount := 100000
     var testLogs []*sumoLog
     testLog := &sumoLog{
       source: testSource,
       line: testLine,
       isPartial: testIsPartial,
     }
-    for i := 0; i < logCount; i++ {
+    for i := 0; i < testLogCount; i++ {
       testLogs = append(testLogs, testLog)
     }
 
@@ -291,7 +291,7 @@ func TestSendLogs(t *testing.T) {
     assert.Equal(t, 1, testClient.requestCount, "should have received one request, logs are batched")
   })
 
-  t.Run("logCount=1, status=BadRequest", func(t *testing.T) {
+  t.Run("testLogCount=1, status=BadRequest", func(t *testing.T) {
     var testLogs []*sumoLog
     testLog := &sumoLog{
       source: testSource,
@@ -314,15 +314,15 @@ func TestSendLogs(t *testing.T) {
     assert.Equal(t, 1, testClient.requestCount, "should have received one request, logs are batched")
   })
 
-  t.Run("logCount=100000, status=BadRequest", func(t *testing.T) {
-    logCount := 100000
+  t.Run("testLogCount=100000, status=BadRequest", func(t *testing.T) {
+    testLogCount := 100000
     var testLogs []*sumoLog
     testLog := &sumoLog{
       source: testSource,
       line: testLine,
       isPartial: testIsPartial,
     }
-    for i := 0; i < logCount; i++ {
+    for i := 0; i < testLogCount; i++ {
       testLogs = append(testLogs, testLog)
     }
 
@@ -357,12 +357,12 @@ func TestWriteMessage(t *testing.T) {
   assert.Nil(t, err, "should be no error when writing no logs")
   assert.Equal(t, 0, testLogsBatch.Len(), "nothing should be written to the writer")
 
-  logCount := 100000
-  for i := 0; i < logCount; i++ {
+  testLogCount := 100000
+  for i := 0; i < testLogCount; i++ {
     testLogs = append(testLogs, testLog)
   }
 
   err = testSumoLogger.writeMessage(&testLogsBatch, testLogs)
   assert.Nil(t, err, "should be no error when writing logs")
-  assert.Equal(t, logCount * (len(testLog.line) + len([]byte("\n"))), testLogsBatch.Len(), "all logs should be written to the writer")
+  assert.Equal(t, testLogCount * (len(testLog.line) + len([]byte("\n"))), testLogsBatch.Len(), "all logs should be written to the writer")
 }
