@@ -234,8 +234,10 @@ func TestHandleBatchedLogs(t *testing.T) {
     go testSumoLogger.handleBatchedLogs()
     testLogBatchQueue <- testLogBatch
     <-testClient.requestReceivedSignal
-    assert.Equal(t, 0, len(testLogBatchQueue))
-    assert.Equal(t, 1, testClient.requestCount)
+    assert.Equal(t, 0, len(testLogBatchQueue),
+      "should have emptied out the batch queue while handling")
+    assert.Equal(t, 1, testClient.requestCount,
+      "should have made only one HTTP request for the batch")
   })
 
   t.Run("status=OK, logBatchCount=1000", func (t *testing.T) {
@@ -258,8 +260,10 @@ func TestHandleBatchedLogs(t *testing.T) {
     for i := 0; i < testLogBatchCount; i++ {
       <-testClient.requestReceivedSignal
     }
-    assert.Equal(t, 0, len(testLogBatchQueue))
-    assert.Equal(t, testLogBatchCount, testClient.requestCount)
+    assert.Equal(t, 0, len(testLogBatchQueue),
+      "should have emptied out the batch queue while handling")
+    assert.Equal(t, testLogBatchCount, testClient.requestCount,
+      "should have made one HTTP request per batch")
   })
 }
 
@@ -312,7 +316,8 @@ func TestSendLogs(t *testing.T) {
 
     err := testSumoLogger.sendLogs(testLogs)
     assert.Nil(t, err, "should be no errors sending logs")
-    assert.Equal(t, 1, testClient.requestCount, "should have received one request, logs are batched")
+    assert.Equal(t, 1, testClient.requestCount,
+      "should have received one request, logs are batched")
   })
 
   t.Run("testLogCount=1, status=BadRequest", func(t *testing.T) {
@@ -335,7 +340,8 @@ func TestSendLogs(t *testing.T) {
 
     err := testSumoLogger.sendLogs(testLogs)
     assert.NotNil(t, err, "should be an error sending logs")
-    assert.Equal(t, 1, testClient.requestCount, "should have received one request, logs are batched")
+    assert.Equal(t, 1, testClient.requestCount,
+      "should have received one request, logs are batched")
   })
 
   t.Run("testLogCount=100000, status=BadRequest", func(t *testing.T) {
@@ -361,7 +367,8 @@ func TestSendLogs(t *testing.T) {
 
     err := testSumoLogger.sendLogs(testLogs)
     assert.NotNil(t, err, "should be an error sending logs")
-    assert.Equal(t, 1, testClient.requestCount, "should have received one request, logs are batched")
+    assert.Equal(t, 1, testClient.requestCount,
+      "should have received one request, logs are batched")
   })
 }
 
@@ -388,5 +395,6 @@ func TestWriteMessage(t *testing.T) {
 
   err = testSumoLogger.writeMessage(&testLogsBatch, testLogs)
   assert.Nil(t, err, "should be no error when writing logs")
-  assert.Equal(t, testLogCount * (len(testLog.line) + len([]byte("\n"))), testLogsBatch.Len(), "all logs should be written to the writer")
+  assert.Equal(t, testLogCount * (len(testLog.line) + len([]byte("\n"))), testLogsBatch.Len(),
+    "all logs should be written to the writer")
 }
