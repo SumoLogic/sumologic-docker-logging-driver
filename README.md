@@ -39,7 +39,7 @@ To specify additional logging driver options, you can use the `--log-opt NAME=VA
 | `sumo-insecure-skip-verify` | No        | false         | Ignore server certificate validation. Boolean.
 | `sumo-root-ca-path`         | No        |               | Set the path to a custom root certificate.
 | `sumo-server-name`          | No        |               | Name used to validate the server certificate. By default, uses hostname of the `sumo-url`.
-| `sumo-queue-size`           | No        | 500           | The maximum number of log batches of size sumo-batch-size we can store in memory in the event of network failure, before we begin dropping batches.
+| `sumo-queue-size`           | No        | 100           | The maximum number of log batches of size `sumo-batch-size` we can store in memory in the event of network failure, before we begin dropping batches. Thus in the worst case, the plugin will use `sumo-batch-size` * `sumo-queue-size` bytes of memory per container (default 100 MB).
 
 ```bash
 $ docker run --log-driver=sumologic \
