@@ -150,13 +150,13 @@ func TestBatchLogs(t *testing.T) {
     }
     go testSumoLogger.batchLogs()
 
-    testLogCount := 100000
+    logCount := 100000
     go func() {
-      for i := 0; i < testLogCount; i++ {
+      for i := 0; i < logCount; i++ {
         testLogQueue <- testSumoLog
       }
     }()
-    for i := 0; i < testLogCount / (testBatchSize / len(testLine)); i++ {
+    for i := 0; i < logCount / (testBatchSize / len(testLine)); i++ {
       testLogBatch := <-testLogBatchQueue
       assert.Equal(t, testBatchSize / len(testLine), len(testLogBatch),
         "should have correct number of logs in a batch")
@@ -198,13 +198,13 @@ func TestBatchLogs(t *testing.T) {
     }
     go testSumoLogger.batchLogs()
 
-    testLogCount := 1000000
+    logCount := 1000000
     go func() {
-      for i := 0; i < testLogCount; i++ {
+      for i := 0; i < logCount; i++ {
         testLogQueue <- testSumoLog
       }
     }()
-    for i := 0; i < testLogCount / (testBatchSize / len(testLine)); i++ {
+    for i := 0; i < logCount / (testBatchSize / len(testLine)); i++ {
       testLogBatch := <-testLogBatchQueue
       assert.Equal(t, testBatchSize / len(testLine), len(testLogBatch),
         "should have correct number of logs in a batch")
@@ -222,7 +222,7 @@ func TestHandleBatchedLogs(t *testing.T) {
   }
   testLogBatch := []*sumoLog{testSumoLog}
 
-  t.Run("status=OK", func (t *testing.T) {
+  t.Run("status=OK, logBatchCount=1", func (t *testing.T) {
     testLogBatchQueue := make(chan []*sumoLog, 4000)
     defer close(testLogBatchQueue)
     testClient := NewMockHttpClient(http.StatusOK)
