@@ -265,8 +265,8 @@ func TestSendLogs(t *testing.T) {
     assert.Equal(t, 1, testClient.requestCount, "should have received one request")
   })
 
-  t.Run("logCount=1000, status=OK", func(t *testing.T) {
-    logCount := 1000
+  t.Run("logCount=100000, status=OK", func(t *testing.T) {
+    logCount := 100000
     var testLogs []*sumoLog
     testLog := &sumoLog{
       source: testSource,
@@ -314,8 +314,8 @@ func TestSendLogs(t *testing.T) {
     assert.Equal(t, 1, testClient.requestCount, "should have received one request, logs are batched")
   })
 
-  t.Run("logCount=1000, status=BadRequest", func(t *testing.T) {
-    logCount := 1000
+  t.Run("logCount=100000, status=BadRequest", func(t *testing.T) {
+    logCount := 100000
     var testLogs []*sumoLog
     testLog := &sumoLog{
       source: testSource,
@@ -357,7 +357,7 @@ func TestWriteMessage(t *testing.T) {
   assert.Nil(t, err, "should be no error when writing no logs")
   assert.Equal(t, 0, testLogsBatch.Len(), "nothing should be written to the writer")
 
-  logCount := 100
+  logCount := 100000
   for i := 0; i < logCount; i++ {
     testLogs = append(testLogs, testLog)
   }
