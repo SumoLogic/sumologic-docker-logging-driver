@@ -1,5 +1,7 @@
 # docker-logging-driver
 
+**Disclaimer:** This repo is still under development.  Please do not use for production workloads until it is officially released.
+
 This is SumoLogic's logging driver plugin for Docker.
 It collects logs from specified Docker containers and sends them to a SumoLogic Hosted Collector via an HTTP source.
 Logging driver plugins are currently not supported on Windows; see Docker's logging driver plugin [documentation].
