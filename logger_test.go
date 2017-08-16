@@ -223,7 +223,7 @@ func TestHandleBatchedLogs(t *testing.T) {
   testLogBatch := []*sumoLog{testSumoLog}
 
   t.Run("status=OK, logBatchCount=1", func (t *testing.T) {
-    testLogBatchQueue := make(chan []*sumoLog, 4000)
+    testLogBatchQueue := make(chan []*sumoLog, defaultQueueSizeItems)
     defer close(testLogBatchQueue)
     testClient := NewMockHttpClient(http.StatusOK)
     testSumoLogger := &sumoLogger{
@@ -237,10 +237,34 @@ func TestHandleBatchedLogs(t *testing.T) {
     assert.Equal(t, 0, len(testLogBatchQueue))
     assert.Equal(t, 1, testClient.requestCount)
   })
+
+  t.Run("status=OK, logBatchCount=1000", func (t *testing.T) {
+    testLogBatchQueue := make(chan []*sumoLog, defaultQueueSizeItems)
+    defer close(testLogBatchQueue)
+    testClient := NewMockHttpClient(http.StatusOK)
+    testSumoLogger := &sumoLogger{
+      httpSourceUrl: testHttpSourceUrl,
+      httpClient: testClient,
+      logBatchQueue: testLogBatchQueue,
+    }
+    go testSumoLogger.handleBatchedLogs()
+
+    testLogBatchCount := 1000
+    go func() {
+      for i := 0; i < testLogBatchCount; i++ {
+        testLogBatchQueue <- testLogBatch
+      }
+    }()
+    for i := 0; i < testLogBatchCount; i++ {
+      <-testClient.requestReceivedSignal
+    }
+    assert.Equal(t, 0, len(testLogBatchQueue))
+    assert.Equal(t, testLogBatchCount, testClient.requestCount)
+  })
 }
 
 func TestSendLogs(t *testing.T) {
-  testLogBatchQueue := make(chan []*sumoLog, 4000)
+  testLogBatchQueue := make(chan []*sumoLog, defaultQueueSizeItems)
 
   t.Run("testLogCount=1, status=OK", func(t *testing.T) {
     var testLogs []*sumoLog
