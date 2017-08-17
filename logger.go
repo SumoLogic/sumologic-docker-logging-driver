@@ -88,7 +88,7 @@ func (sumoLogger *sumoLogger) batchLogs() {
         return
       }
       if len(log.line) > sumoLogger.batchSize {
-        logrus.Warn(fmt.Sprintf("%s: Log is too large to batch, dropping log. batch-size: %d bytes",
+        logrus.Warn(fmt.Sprintf("%s: Log is too large to batch, dropping log. log-size: %d bytes",
           pluginName, len(log.line)))
         continue
       }
