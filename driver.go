@@ -56,6 +56,7 @@ const (
   defaultGzipCompression = true
   defaultGzipCompressionLevel = gzip.DefaultCompression
   defaultInsecureSkipVerify = false
+
   defaultSendingIntervalMs = 2000 * time.Millisecond
   defaultQueueSizeItems = 100
   defaultBatchSizeBytes = 1000000
@@ -89,7 +90,7 @@ type sumoLogger struct {
 
   inputFile io.ReadWriteCloser
   logQueue chan *sumoLog
-  logBatchQueue chan []*sumoLog
+  logBatchQueue chan *sumoLogBatch
   sendingInterval time.Duration
   batchSize int
 }
@@ -115,7 +116,7 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
   sumoDriver.mu.Lock()
   if _, exists := sumoDriver.loggers[file]; exists {
     sumoDriver.mu.Unlock()
-    return nil, fmt.Errorf("a logger for %q already exists", file)
+    return nil, fmt.Errorf("%s: a logger for %q already exists", pluginName, file)
   }
   sumoDriver.mu.Unlock()
 
@@ -144,6 +145,7 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
 
   httpClient := &http.Client{
     Transport: transport,
+    Timeout: 30 * time.Second,
   }
 
   sendingInterval := parseLogOptDuration(info, logOptSendingInterval, defaultSendingIntervalMs)
@@ -165,7 +167,7 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
     gzipCompression: gzipCompression,
     gzipCompressionLevel: gzipCompressionLevel,
     logQueue: make(chan *sumoLog, 10 * queueSize),
-    logBatchQueue: make(chan []*sumoLog, queueSize),
+    logBatchQueue: make(chan *sumoLogBatch, queueSize),
     sendingInterval: sendingInterval,
     batchSize: batchSize,
   }
@@ -181,6 +183,7 @@ func (sumoDriver *sumoDriver) StopLogging(file string) error {
   sumoDriver.mu.Lock()
   sumoLogger, exists := sumoDriver.loggers[file]
   if exists {
+    logrus.Info(fmt.Sprintf("%s: Stopping logging driver for closed container.", pluginName))
     sumoLogger.inputFile.Close()
     delete(sumoDriver.loggers, file)
   }
@@ -192,14 +195,14 @@ func parseLogOptIntPositive(info logger.Info, logOptKey string, defaultValue int
   if input, exists := info.Config[logOptKey]; exists {
     inputValue64, err := strconv.ParseInt(input, stringToIntBase, stringToIntBitSize)
     if err != nil {
-      logrus.Error(fmt.Errorf("Failed to parse value of %s as integer. Using default %d. %v",
-        logOptKey, defaultValue, err))
+      logrus.Error(fmt.Errorf("%s: Failed to parse value of %s as integer. Using default %d. %v",
+        pluginName, logOptKey, defaultValue, err))
       return defaultValue
     }
     inputValue := int(inputValue64)
     if inputValue <= 0 {
-      logrus.Error(fmt.Errorf("%s must be a positive value, got %d. Using default %d.",
-        logOptKey, inputValue, defaultValue))
+      logrus.Error(fmt.Errorf("%s: %s must be a positive value, got %d. Using default %d.",
+        pluginName, logOptKey, inputValue, defaultValue))
       return defaultValue
     }
     return inputValue
@@ -211,14 +214,14 @@ func parseLogOptDuration(info logger.Info, logOptKey string, defaultValue time.D
   if input, exists := info.Config[logOptKey]; exists {
     inputValue, err := time.ParseDuration(input)
     if err != nil {
-      logrus.Error(fmt.Errorf("Failed to parse value of %s as duration. Using default %v. %v",
-        logOptKey, defaultValue, err))
+      logrus.Error(fmt.Errorf("%s: Failed to parse value of %s as duration. Using default %v. %v",
+        pluginName, logOptKey, defaultValue, err))
       return defaultValue
     }
     zeroSeconds, _ := time.ParseDuration("0s")
     if inputValue <= zeroSeconds {
-      logrus.Error(fmt.Errorf("%s must be a positive duration, got %s. Using default %s.",
-        logOptKey, inputValue.String(), defaultValue.String()))
+      logrus.Error(fmt.Errorf("%s: %s must be a positive duration, got %s. Using default %s.",
+        pluginName, logOptKey, inputValue.String(), defaultValue.String()))
       return defaultValue
     }
     return inputValue
@@ -230,8 +233,8 @@ func parseLogOptBoolean(info logger.Info, logOptKey string, defaultValue bool) b
   if input, exists := info.Config[logOptKey]; exists {
     inputValue, err := strconv.ParseBool(input)
     if err != nil {
-      logrus.Error(fmt.Errorf("Failed to parse value of %s as boolean. Using default %t. %v",
-        logOptKey, defaultValue, err))
+      logrus.Error(fmt.Errorf("%s: Failed to parse value of %s as boolean. Using default %t. %v",
+        pluginName, logOptKey, defaultValue, err))
       return defaultValue
     }
     return inputValue
@@ -243,8 +246,8 @@ func parseLogOptProxyUrl(info logger.Info, logOptKey string, defaultValue *url.U
   if input, exists := info.Config[logOptKey]; exists {
     inputValue, err := url.Parse(input)
     if err != nil {
-      logrus.Error(fmt.Errorf("Failed to parse value of %s as url. Initializing without proxy. %v",
-        logOptKey, defaultValue, err))
+      logrus.Error(fmt.Errorf("%s: Failed to parse value of %s as url. Initializing without proxy. %v",
+        pluginName, logOptKey, defaultValue, err))
       return defaultValue
     }
     return inputValue
@@ -256,14 +259,15 @@ func parseLogOptGzipCompressionLevel(info logger.Info, logOptKey string, default
   if input, exists := info.Config[logOptKey]; exists {
     inputValue64, err := strconv.ParseInt(input, stringToIntBase, stringToIntBitSize)
     if err != nil {
-      logrus.Error(fmt.Errorf("Failed to parse value of %s as integer. Using default %d. %v",
-        logOptKey, defaultValue, err))
+      logrus.Error(fmt.Errorf("%s: Failed to parse value of %s as integer. Using default %d. %v",
+        pluginName, logOptKey, defaultValue, err))
       return defaultValue
     }
     inputValue := int(inputValue64)
     if inputValue < defaultValue || inputValue > gzip.BestCompression {
-      logrus.Error(fmt.Errorf("Not supported level '%d' for %s (supported values between %d and %d). Using default compression.",
-        inputValue, logOptKey, defaultValue, gzip.BestCompression))
+      logrus.Error(fmt.Errorf(
+        "%s: Not supported level '%d' for %s (supported values between %d and %d). Using default compression.",
+        pluginName, inputValue, logOptKey, defaultValue, gzip.BestCompression))
       return defaultValue
     }
     return inputValue

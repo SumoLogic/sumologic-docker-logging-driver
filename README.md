@@ -1,7 +1,9 @@
-# docker-logging-driver
+# sumologic-docker-logging-driver
 
-This is SumoLogic's logging driver plugin for Docker.
-It collects logs from specified Docker containers and sends them to a SumoLogic Hosted Collector via an HTTP source.
+**Disclaimer:** This repo is still under development.  Please do not use for production workloads until it is officially released.
+
+This is Sumo Logic's logging driver plugin for Docker.
+It collects logs from specified Docker containers and sends them to a Sumo Logic Hosted Collector via an HTTP source.
 Logging driver plugins are currently not supported on Windows; see Docker's logging driver plugin [documentation].
 
 [documentation]: https://github.com/docker/cli/blob/master/docs/extend/plugins_logging.md
@@ -25,7 +27,7 @@ To run a specific container with the logging driver, you can use the `--log-driv
 $ docker run --log-driver=sumologic ...
 ```
 
-### SumoLogic Options
+### Sumo Logic Options
 To specify additional logging driver options, you can use the `--log-opt NAME=VALUE` flag.
 
 | Option                      | Required? | Default Value | Description
@@ -39,23 +41,22 @@ To specify additional logging driver options, you can use the `--log-opt NAME=VA
 | `sumo-insecure-skip-verify` | No        | false         | Ignore server certificate validation. Boolean.
 | `sumo-root-ca-path`         | No        |               | Set the path to a custom root certificate.
 | `sumo-server-name`          | No        |               | Name used to validate the server certificate. By default, uses hostname of the `sumo-url`.
-| `sumo-queue-size`           | No        | 100           | The maximum number of log batches of size sumo-batch-size we can store in memory
-  in the event of network failure before we begin dropping batches.
+| `sumo-queue-size`           | No        | 100           | The maximum number of log batches of size `sumo-batch-size` we can store in memory in the event of network failure, before we begin dropping batches. Thus in the worst case, the plugin will use `sumo-batch-size` * `sumo-queue-size` bytes of memory per container (default 100 MB).
 
 ```bash
 $ docker run --log-driver=sumologic \
-    --log-opt sumo-url=https://example.sumologic.net/receiver/v1/http/token \
-    --log-opt sumo-batch-size=2000 \
-    --log-opt sumo-buffer-max=10000 \
+    --log-opt sumo-url=https://example.sumologic.com/receiver/v1/http/token \
+    --log-opt sumo-batch-size=2000000 \
+    --log-opt sumo-queue-size=400 \
     --log-opt sumo-sending-frequency=500ms \
-    --log-opt sumo-compress=true \
+    --log-opt sumo-compress=false \
     --log-opt ...
     your/container
 ```
 
 ### Setting Default Options
 To set the `sumologic` logging driver as the default, find the `daemon.json` file located in `/etc/docker` on Linux hosts.
-Set the `log-driver` and `log-opt` keys to the desired values and restart Docker for the changes to take effect. For more information about +configuring Docker using `daemon.json`, see [daemon.json].
+Set the `log-driver` and `log-opts` keys to the desired values and restart Docker for the changes to take effect. For more information about configuring Docker using `daemon.json`, see [daemon.json].
 
 [daemon.json]: https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file
 
@@ -63,12 +64,12 @@ Set the `log-driver` and `log-opt` keys to the desired values and restart Docker
 {
   "log-driver": "sumologic",
   "log-opts": {
-    "sumo-url": "https://example.sumologic.net/receiver/v1/http/token"
+    "sumo-url": "https://example.sumologic.com/receiver/v1/http/token"
   }
 }
 ```
 
-Now all containers started with `docker run your/container` will use send logs to SumoLogic.
+Now all containers started with `docker run your/container` will send logs to Sumo Logic.
 
 ## Uninstall
 To cleanly disable and remove the plugin, run `plugin_uninstall.sh`.

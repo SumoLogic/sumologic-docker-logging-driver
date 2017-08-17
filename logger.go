@@ -7,6 +7,7 @@ import (
   "fmt"
   "io"
   "io/ioutil"
+  "math"
   "net/http"
   "time"
 
@@ -16,7 +17,7 @@ import (
 )
 
 const (
-  maxRetryInterval = 30 * time.Second
+  maxRetryInterval = 5 * time.Second
   initialRetryInterval = 500 * time.Millisecond
   retryMultiplier = 2
 
@@ -34,19 +35,19 @@ type sumoLog struct {
 
 type sumoLogBatch struct {
   logs []*sumoLog
-  size int
+  sizeBytes int
 }
 
 func NewSumoLogBatch() *sumoLogBatch {
   return &sumoLogBatch{
     logs: nil,
-    size: 0,
+    sizeBytes: 0,
   }
 }
 
 func (sumoLogBatch *sumoLogBatch) Reset() {
   sumoLogBatch.logs = nil
-  sumoLogBatch.size = 0
+  sumoLogBatch.sizeBytes = 0
 }
 
 func (sumoLogger *sumoLogger) consumeLogsFromFile() {
@@ -82,18 +83,25 @@ func (sumoLogger *sumoLogger) batchLogs() {
     select {
     case log, open := <-sumoLogger.logQueue:
       if !open {
-        sumoLogger.logBatchQueue <- logBatch.logs
+        sumoLogger.logBatchQueue <- logBatch
         close(sumoLogger.logBatchQueue)
         return
       }
-      logBatch.logs = append(logBatch.logs, log)
-      logBatch.size += len(log.line)
-      if logBatch.size >= sumoLogger.batchSize {
-        sumoLogger.pushBatchToQueue(logBatch)
+      if len(log.line) > sumoLogger.batchSize {
+        logrus.Warn(fmt.Sprintf("%s: Log is too large to batch, dropping log. batch-size: %d bytes",
+          pluginName, len(log.line)))
+        continue
       }
+      if logBatch.sizeBytes + len(log.line) > sumoLogger.batchSize {
+        sumoLogger.pushBatchToQueue(logBatch)
+        logBatch = NewSumoLogBatch()
+      }
+      logBatch.logs = append(logBatch.logs, log)
+      logBatch.sizeBytes += len(log.line)
     case <-ticker.C:
       if len(logBatch.logs) > 0 {
         sumoLogger.pushBatchToQueue(logBatch)
+        logBatch = NewSumoLogBatch()
       }
     }
   }
@@ -101,12 +109,11 @@ func (sumoLogger *sumoLogger) batchLogs() {
 
 func (sumoLogger *sumoLogger) pushBatchToQueue(logBatch *sumoLogBatch) {
   select {
-  case sumoLogger.logBatchQueue <- logBatch.logs:
-    logBatch.Reset()
+  case sumoLogger.logBatchQueue <- logBatch:
   default:
     <-sumoLogger.logBatchQueue
-    logrus.Error(fmt.Errorf("log batch queue full, dropping oldest batch"))
-    sumoLogger.logBatchQueue <- logBatch.logs
+    logrus.Error(fmt.Errorf("%s: Log batch queue full, dropping oldest batch", pluginName))
+    sumoLogger.logBatchQueue <- logBatch
   }
 }
 
@@ -118,17 +125,19 @@ func (sumoLogger *sumoLogger) handleBatchedLogs() {
       return
     }
     for {
-      err := sumoLogger.sendLogs(logBatch)
+      logrus.Info(fmt.Sprintf("%s: Sending logs batch. batch-size: %d bytes",
+        pluginName, logBatch.sizeBytes))
+      err := sumoLogger.sendLogs(logBatch.logs)
       if err == nil {
         retryInterval = initialRetryInterval
         break
       }
+      logrus.Info(fmt.Sprintf("%s: Sleeping for %s before retry...",
+        pluginName, retryInterval.String()))
       time.Sleep(retryInterval)
       if retryInterval < maxRetryInterval {
-        retryInterval *= retryMultiplier
-        if retryInterval > maxRetryInterval {
-          retryInterval = maxRetryInterval
-        }
+        retryInterval = time.Duration(
+          math.Min(retryInterval.Seconds() * retryMultiplier, maxRetryInterval.Seconds())) * time.Second
       }
     }
   }
@@ -165,7 +174,7 @@ func (sumoLogger *sumoLogger) sendLogs(logs []*sumoLog) error {
     if err != nil {
       return err
     }
-    return fmt.Errorf("%s: Failed to send event: %s - %s", pluginName, response.Status, body)
+    return fmt.Errorf("%s: Failed to send logs batch: %s - %s", pluginName, response.Status, body)
   }
   return nil
 }

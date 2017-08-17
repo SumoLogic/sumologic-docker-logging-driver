@@ -36,6 +36,7 @@ var (
 )
 
 func TestDriversDefaultConfig (t *testing.T) {
+  logrus.SetOutput(ioutil.Discard)
   testLoggersCount := 100
 
   for i := 0; i < testLoggersCount; i++ {
