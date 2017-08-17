@@ -45,7 +45,7 @@ To specify additional logging driver options, you can use the `--log-opt NAME=VA
 
 ```bash
 $ docker run --log-driver=sumologic \
-    --log-opt sumo-url=https://example.sumologic.net/receiver/v1/http/token \
+    --log-opt sumo-url=https://example.sumologic.com/receiver/v1/http/token \
     --log-opt sumo-batch-size=2000000 \
     --log-opt sumo-queue-size=400 \
     --log-opt sumo-sending-frequency=500ms \
