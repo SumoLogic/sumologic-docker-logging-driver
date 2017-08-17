@@ -4,6 +4,7 @@ import (
   "bytes"
   "context"
   "io/ioutil"
+  "math"
   "net/http"
   "os"
   "testing"
@@ -214,6 +215,7 @@ func TestBatchLogs(t *testing.T) {
 }
 
 func TestHandleBatchedLogs(t *testing.T) {
+  logrus.SetOutput(ioutil.Discard)
   testSumoLog := &sumoLog{
     source: testSource,
     line: testLine,
@@ -266,6 +268,29 @@ func TestHandleBatchedLogs(t *testing.T) {
       "should have emptied out the batch queue while handling")
     assert.Equal(t, testLogBatchCount, testClient.requestCount,
       "should have made one HTTP request per batch")
+  })
+  
+  t.Run("status=BadRequest", func (t *testing.T) {
+    testLogBatchQueue := make(chan []*sumoLog, defaultQueueSizeItems)
+    defer close(testLogBatchQueue)
+    testClient := NewMockHttpClient(http.StatusBadRequest)
+    testSumoLogger := &sumoLogger{
+     httpSourceUrl: testHttpSourceUrl,
+     httpClient: testClient,
+     logBatchQueue: testLogBatchQueue,
+    }
+    go testSumoLogger.handleBatchedLogs()
+    testLogBatchQueue <- testLogBatch
+    testRetryCount := 3
+    testElapsedTime := initialRetryInterval * time.Duration(math.Pow(retryMultiplier, float64(testRetryCount)))
+    time.Sleep(testElapsedTime)
+    for i := 0; i < testRetryCount + 1; i++ {
+     <-testClient.requestReceivedSignal
+    }
+    assert.Equal(t, 0, len(testLogBatchQueue),
+     "should have emptied out the batch queue while handling")
+    assert.Equal(t, testRetryCount + 1, testClient.requestCount,
+     "should have made one HTTP request to start, plus one request per retry")
   })
 }
 

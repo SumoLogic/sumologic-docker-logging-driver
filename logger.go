@@ -6,6 +6,7 @@ import (
   "fmt"
   "io"
   "io/ioutil"
+  "math"
   "net/http"
   "time"
 
@@ -15,7 +16,9 @@ import (
 )
 
 const (
-  retryInterval = 5 * time.Second
+  maxRetryInterval = 5 * time.Second
+  initialRetryInterval = 500 * time.Millisecond
+  retryMultiplier = 2
 
   fileReaderMaxSize = 1e6
   stringToIntBase = 10
@@ -114,6 +117,7 @@ func (sumoLogger *sumoLogger) pushBatchToQueue(logBatch *sumoLogBatch) {
 }
 
 func (sumoLogger *sumoLogger) handleBatchedLogs() {
+  retryInterval := initialRetryInterval
   for {
     logBatch, open := <-sumoLogger.logBatchQueue
     if !open {
@@ -124,9 +128,15 @@ func (sumoLogger *sumoLogger) handleBatchedLogs() {
         pluginName, logBatch.sizeBytes))
       err := sumoLogger.sendLogs(logBatch.logs)
       if err == nil {
+        retryInterval = initialRetryInterval
         break
       }
+      logrus.Info(fmt.Sprintf("Sleeping for %s before retry...", retryInterval.String()))
       time.Sleep(retryInterval)
+      if retryInterval < maxRetryInterval {
+        retryInterval = time.Duration(
+          math.Min(retryInterval.Seconds() * retryMultiplier, maxRetryInterval.Seconds())) * time.Second
+      }
     }
   }
 }
