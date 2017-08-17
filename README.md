@@ -64,7 +64,7 @@ Set the `log-driver` and `log-opts` keys to the desired values and restart Docke
 {
   "log-driver": "sumologic",
   "log-opts": {
-    "sumo-url": "https://example.sumologic.net/receiver/v1/http/token"
+    "sumo-url": "https://example.sumologic.com/receiver/v1/http/token"
   }
 }
 ```
