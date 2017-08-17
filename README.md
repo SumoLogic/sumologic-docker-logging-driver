@@ -3,7 +3,7 @@
 **Disclaimer:** This repo is still under development.  Please do not use for production workloads until it is officially released.
 
 This is Sumo Logic's logging driver plugin for Docker.
-It collects logs from specified Docker containers and sends them to a SumoLogic Hosted Collector via an HTTP source.
+It collects logs from specified Docker containers and sends them to a Sumo Logic Hosted Collector via an HTTP source.
 Logging driver plugins are currently not supported on Windows; see Docker's logging driver plugin [documentation].
 
 [documentation]: https://github.com/docker/cli/blob/master/docs/extend/plugins_logging.md
@@ -69,7 +69,7 @@ Set the `log-driver` and `log-opts` keys to the desired values and restart Docke
 }
 ```
 
-Now all containers started with `docker run your/container` will send logs to SumoLogic.
+Now all containers started with `docker run your/container` will send logs to Sumo Logic.
 
 ## Uninstall
 To cleanly disable and remove the plugin, run `plugin_uninstall.sh`.
