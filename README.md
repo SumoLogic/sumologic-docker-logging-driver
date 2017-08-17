@@ -2,7 +2,7 @@
 
 **Disclaimer:** This repo is still under development.  Please do not use for production workloads until it is officially released.
 
-This is SumoLogic's logging driver plugin for Docker.
+This is Sumo Logic's logging driver plugin for Docker.
 It collects logs from specified Docker containers and sends them to a SumoLogic Hosted Collector via an HTTP source.
 Logging driver plugins are currently not supported on Windows; see Docker's logging driver plugin [documentation].
 
@@ -27,7 +27,7 @@ To run a specific container with the logging driver, you can use the `--log-driv
 $ docker run --log-driver=sumologic ...
 ```
 
-### SumoLogic Options
+### Sumo Logic Options
 To specify additional logging driver options, you can use the `--log-opt NAME=VALUE` flag.
 
 | Option                      | Required? | Default Value | Description
@@ -56,7 +56,7 @@ $ docker run --log-driver=sumologic \
 
 ### Setting Default Options
 To set the `sumologic` logging driver as the default, find the `daemon.json` file located in `/etc/docker` on Linux hosts.
-Set the `log-driver` and `log-opts` keys to the desired values and restart Docker for the changes to take effect. For more information about +configuring Docker using `daemon.json`, see [daemon.json].
+Set the `log-driver` and `log-opts` keys to the desired values and restart Docker for the changes to take effect. For more information about configuring Docker using `daemon.json`, see [daemon.json].
 
 [daemon.json]: https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file
 
