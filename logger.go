@@ -131,7 +131,8 @@ func (sumoLogger *sumoLogger) handleBatchedLogs() {
         retryInterval = initialRetryInterval
         break
       }
-      logrus.Info(fmt.Sprintf("Sleeping for %s before retry...", retryInterval.String()))
+      logrus.Info(fmt.Sprintf("%s: Sleeping for %s before retry...",
+        pluginName, retryInterval.String()))
       time.Sleep(retryInterval)
       if retryInterval < maxRetryInterval {
         retryInterval = time.Duration(

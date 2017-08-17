@@ -269,9 +269,9 @@ func TestHandleBatchedLogs(t *testing.T) {
     assert.Equal(t, testLogBatchCount, testClient.requestCount,
       "should have made one HTTP request per batch")
   })
-  
+
   t.Run("status=BadRequest", func (t *testing.T) {
-    testLogBatchQueue := make(chan []*sumoLog, defaultQueueSizeItems)
+    testLogBatchQueue := make(chan *sumoLogBatch, defaultQueueSizeItems)
     defer close(testLogBatchQueue)
     testClient := NewMockHttpClient(http.StatusBadRequest)
     testSumoLogger := &sumoLogger{
