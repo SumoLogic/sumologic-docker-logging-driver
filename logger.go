@@ -79,22 +79,25 @@ func (sumoLogger *sumoLogger) batchLogs() {
     select {
     case log, open := <-sumoLogger.logQueue:
       if !open {
-        sumoLogger.logBatchQueue <- logBatch.logs
+        sumoLogger.logBatchQueue <- logBatch
         close(sumoLogger.logBatchQueue)
         return
       }
       if len(log.line) > sumoLogger.batchSize {
-        logrus.Warn("Log is too large to batch, dropping log.")
+        logrus.Warn(fmt.Sprintf("%s: Log is too large to batch, dropping log. batch-size: %d bytes",
+          pluginName, len(log.line)))
         continue
       }
       if logBatch.sizeBytes + len(log.line) > sumoLogger.batchSize {
         sumoLogger.pushBatchToQueue(logBatch)
+        logBatch = NewSumoLogBatch()
       }
       logBatch.logs = append(logBatch.logs, log)
       logBatch.sizeBytes += len(log.line)
     case <-ticker.C:
       if len(logBatch.logs) > 0 {
         sumoLogger.pushBatchToQueue(logBatch)
+        logBatch = NewSumoLogBatch()
       }
     }
   }
@@ -102,13 +105,11 @@ func (sumoLogger *sumoLogger) batchLogs() {
 
 func (sumoLogger *sumoLogger) pushBatchToQueue(logBatch *sumoLogBatch) {
   select {
-  case sumoLogger.logBatchQueue <- logBatch.logs:
-    logBatch.Reset()
+  case sumoLogger.logBatchQueue <- logBatch:
   default:
     <-sumoLogger.logBatchQueue
-    logrus.Error(fmt.Errorf("log batch queue full, dropping oldest batch"))
-    sumoLogger.logBatchQueue <- logBatch.logs
-    logBatch.Reset()
+    logrus.Error(fmt.Errorf("%s: Log batch queue full, dropping oldest batch", pluginName))
+    sumoLogger.logBatchQueue <- logBatch
   }
 }
 
@@ -119,7 +120,9 @@ func (sumoLogger *sumoLogger) handleBatchedLogs() {
       return
     }
     for {
-      err := sumoLogger.sendLogs(logBatch)
+      logrus.Info(fmt.Sprintf("%s: Sending logs batch. batch-size: %d bytes",
+        pluginName, logBatch.sizeBytes))
+      err := sumoLogger.sendLogs(logBatch.logs)
       if err == nil {
         break
       }
@@ -150,7 +153,7 @@ func (sumoLogger *sumoLogger) sendLogs(logs []*sumoLog) error {
     if err != nil {
       return err
     }
-    return fmt.Errorf("%s: Failed to send event: %s - %s", pluginName, response.Status, body)
+    return fmt.Errorf("%s: Failed to send logs batch: %s - %s", pluginName, response.Status, body)
   }
   return nil
 }

@@ -45,7 +45,7 @@ type sumoLogger struct {
 
   inputFile io.ReadWriteCloser
   logQueue chan *sumoLog
-  logBatchQueue chan []*sumoLog
+  logBatchQueue chan *sumoLogBatch
   sendingInterval time.Duration
   batchSize int
 }
@@ -76,6 +76,7 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
   sumoDriver.mu.Unlock()
 
   httpClient := &http.Client{}
+  httpClient.Timeout = 30 * time.Second
 
   sendingInterval := defaultSendingIntervalMs
   queueSize := defaultQueueSizeItems
@@ -92,7 +93,7 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
     httpClient: httpClient,
     inputFile: inputFile,
     logQueue: make(chan *sumoLog, 10 * queueSize),
-    logBatchQueue: make(chan []*sumoLog, queueSize),
+    logBatchQueue: make(chan *sumoLogBatch, queueSize),
     sendingInterval: sendingInterval,
     batchSize: batchSize,
   }
@@ -108,7 +109,7 @@ func (sumoDriver *sumoDriver) StopLogging(file string) error {
   sumoDriver.mu.Lock()
   sumoLogger, exists := sumoDriver.loggers[file]
   if exists {
-    logrus.Info("stopping logging driver for closed container.")
+    logrus.Info(fmt.Sprintf("%s: Stopping logging driver for closed container.", pluginName))
     sumoLogger.inputFile.Close()
     delete(sumoDriver.loggers, file)
   }
