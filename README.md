@@ -1,4 +1,4 @@
-# docker-logging-driver
+# sumologic-docker-logging-driver
 
 **Disclaimer:** This repo is still under development.  Please do not use for production workloads until it is officially released.
 
