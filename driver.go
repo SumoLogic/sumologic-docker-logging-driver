@@ -17,8 +17,8 @@ import (
 
   "github.com/docker/docker/daemon/logger"
   "github.com/pkg/errors"
-  "github.com/tonistiigi/fifo"
   "github.com/sirupsen/logrus"
+  "github.com/tonistiigi/fifo"
 )
 
 const (
