@@ -2,6 +2,7 @@ package main
 
 import (
   "bytes"
+  "compress/gzip"
   "encoding/binary"
   "fmt"
   "io"
@@ -87,7 +88,7 @@ func (sumoLogger *sumoLogger) batchLogs() {
         return
       }
       if len(log.line) > sumoLogger.batchSize {
-        logrus.Warn(fmt.Sprintf("%s: Log is too large to batch, dropping log. batch-size: %d bytes",
+        logrus.Warn(fmt.Sprintf("%s: Log is too large to batch, dropping log. log-size: %d bytes",
           pluginName, len(log.line)))
         continue
       }
@@ -144,13 +145,22 @@ func (sumoLogger *sumoLogger) handleBatchedLogs() {
 
 func (sumoLogger *sumoLogger) sendLogs(logs []*sumoLog) error {
   var logsBatch bytes.Buffer
-  if err := sumoLogger.writeMessage(&logsBatch, logs); err != nil{
-    return err
+  if sumoLogger.gzipCompression {
+    if err := sumoLogger.writeMessageGzipCompression(&logsBatch, logs); err != nil {
+      return err
+    }
+  } else {
+    if err := sumoLogger.writeMessage(&logsBatch, logs); err != nil{
+      return err
+    }
   }
 
   request, err := http.NewRequest("POST", sumoLogger.httpSourceUrl, bytes.NewBuffer(logsBatch.Bytes()))
   if err != nil {
     return err
+  }
+  if sumoLogger.gzipCompression {
+    request.Header.Add("Content-Encoding", "gzip")
   }
 
   response, err := sumoLogger.httpClient.Do(request)
@@ -174,6 +184,20 @@ func (sumoLogger *sumoLogger) writeMessage(writer io.Writer, logs []*sumoLog) er
     if _, err := writer.Write(append(log.line, []byte("\n")...)); err != nil {
       return err
     }
+  }
+  return nil
+}
+
+func (sumoLogger *sumoLogger) writeMessageGzipCompression(writer io.Writer, logs []*sumoLog) error {
+  gzipWriter, err := gzip.NewWriterLevel(writer, sumoLogger.gzipCompressionLevel)
+  if err != nil {
+    return err
+  }
+  if err := sumoLogger.writeMessage(gzipWriter, logs); err != nil {
+    return err
+  }
+  if err := gzipWriter.Close(); err != nil {
+    return err
   }
   return nil
 }
