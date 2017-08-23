@@ -93,6 +93,8 @@ type sumoLogger struct {
   logBatchQueue chan *sumoLogBatch
   sendingInterval time.Duration
   batchSize int
+
+  info logger.Info
 }
 
 func newSumoDriver() *sumoDriver {
@@ -170,6 +172,7 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
     logBatchQueue: make(chan *sumoLogBatch, queueSize),
     sendingInterval: sendingInterval,
     batchSize: batchSize,
+    info: info,
   }
 
   sumoDriver.mu.Lock()
