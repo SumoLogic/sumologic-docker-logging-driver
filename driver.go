@@ -11,11 +11,13 @@ import (
   "net/http"
   "net/url"
   "strconv"
+  "strings"
   "sync"
   "syscall"
   "time"
 
   "github.com/docker/docker/daemon/logger"
+  "github.com/docker/docker/daemon/logger/loggerutils"
   "github.com/pkg/errors"
   "github.com/sirupsen/logrus"
   "github.com/tonistiigi/fifo"
@@ -52,6 +54,8 @@ const (
     If the number of bytes never reaches the batch size, the driver will send the logs in smaller
     batches at predefined intervals; see sending interval. */
   logOptBatchSize = "sumo-batch-size"
+  /* The _sourceCategory. Default is "dockerlog" */
+  logOptSourceCategory = "sumo-source-category"
 
   defaultGzipCompression = true
   defaultGzipCompressionLevel = gzip.DefaultCompression
@@ -60,6 +64,8 @@ const (
   defaultSendingIntervalMs = 2000 * time.Millisecond
   defaultQueueSizeItems = 100
   defaultBatchSizeBytes = 1000000
+
+  defaultSourceCategory = "dockerlog"
 
   fileMode = 0700
 )
@@ -95,6 +101,8 @@ type sumoLogger struct {
   batchSize int
 
   info logger.Info
+  tag string
+  sourceCategory string
 }
 
 func newSumoDriver() *sumoDriver {
@@ -121,6 +129,21 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
     return nil, fmt.Errorf("%s: a logger for %q already exists", pluginName, file)
   }
   sumoDriver.mu.Unlock()
+
+  tag, err := loggerutils.ParseLogTag(info, loggerutils.DefaultTemplate)
+	if err != nil {
+		return nil, err
+	}
+  logrus.Info(tag)
+
+  sourceCategory := defaultSourceCategory
+  if sourceCategoryCustom, exists := info.Config[logOptSourceCategory]; exists {
+    sourceCategory = sourceCategoryCustom
+    if strings.Contains(sourceCategoryCustom, "{{.Tag}}") {
+      sourceCategory = strings.Join(strings.Split(sourceCategoryCustom, "{{.Tag}}"), tag)
+    }
+  }
+  logrus.Info(sourceCategory)
 
   gzipCompression := parseLogOptBoolean(info, logOptGzipCompression, defaultGzipCompression)
   gzipCompressionLevel := parseLogOptGzipCompressionLevel(info, logOptGzipCompressionLevel, defaultGzipCompressionLevel)
@@ -173,6 +196,8 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
     sendingInterval: sendingInterval,
     batchSize: batchSize,
     info: info,
+    tag: tag,
+    sourceCategory: sourceCategory,
   }
 
   sumoDriver.mu.Lock()

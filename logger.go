@@ -162,7 +162,7 @@ func (sumoLogger *sumoLogger) sendLogs(logs []*sumoLog) error {
   if sumoLogger.gzipCompression {
     request.Header.Add("Content-Encoding", "gzip")
   }
-  request.Header.Add("X-Sumo-Category", "dockerlog")
+  request.Header.Add("X-Sumo-Category", sumoLogger.sourceCategory)
   request.Header.Add("X-Sumo-Name", sumoLogger.info.ContainerName)
 
   response, err := sumoLogger.httpClient.Do(request)

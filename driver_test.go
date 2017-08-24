@@ -46,11 +46,13 @@ func TestDriversDefaultConfig (t *testing.T) {
     defer os.Remove(filePath + strconv.Itoa(i + 1))
   }
 
+  testContainerID := "12345678901234567890"
+
   info := logger.Info{
     Config: map[string]string{
       logOptUrl: testHttpSourceUrl,
     },
-    ContainerID: "containeriid",
+    ContainerID: testContainerID,
   }
 
   t.Run("NewSumoLogger", func(t *testing.T) {
@@ -68,6 +70,8 @@ func TestDriversDefaultConfig (t *testing.T) {
     assert.Equal(t, defaultBatchSizeBytes, testSumoLogger1.batchSize, "batch size not specified, should be default value")
     assert.Equal(t, &tls.Config{}, testSumoLogger1.tlsConfig, "tls configs not specified, should be default value")
     assert.Nil(t, testSumoLogger1.proxyUrl, "proxy url not specified, should be default value")
+    assert.Equal(t, testContainerID[:12], testSumoLogger1.tag, "tag not specified, should be default value")
+    assert.Equal(t, defaultSourceCategory, testSumoLogger1.sourceCategory, "source category not specified, should be default value")
 
     _, err = testSumoDriver.NewSumoLogger(filePath1, info)
     assert.Error(t, err, "trying to call StartLogging for filepath that already exists should return error")
@@ -146,7 +150,7 @@ func TestDriversLogOpts (t *testing.T) {
     ServerName: testServerName,
   }
 
-  testGzipCompression := true
+  testGzipCompression := false
   testGzipCompressionLevel := gzip.BestCompression
   testSendingInterval := time.Second
   testQueueSize := 2000
@@ -508,5 +512,47 @@ func TestDriversLogOpts (t *testing.T) {
     assert.Equal(t, defaultBatchSizeBytes, testSumoLogger.batchSize, "batch size specified incorrectly, should be default value")
     assert.Equal(t, testProxyUrl, testSumoLogger.proxyUrl, "proxy url specified, should be specified value")
     assert.Equal(t, testTlsConfig, testSumoLogger.tlsConfig, "tls config options specified, should be specified value")
+  })
+
+  t.Run("NewSumoLogger with tag and sourceCategory", func(t *testing.T) {
+    testContainerID := "123456789012345678901234567890"
+    testContainerName := "testContainerName"
+    testContainerImageID := "987654321098765432109876543210"
+    testContainerImageName := "testContainerImageName"
+    testDaemonName := "testDaemonName"
+
+    testTag := "{{.DaemonName}}/{{.ImageName}}/{{.Name}}/{{.FullID}}-{{.ImageID}}"
+
+    testSourceCategory := "testSourceCategory:{{.Tag}}/test"
+
+    info := logger.Info{
+      Config: map[string]string{
+        logOptUrl: testHttpSourceUrl,
+        "tag": testTag,
+        logOptSourceCategory: testSourceCategory,
+      },
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
+      ContainerImageID: testContainerImageID,
+      ContainerImageName: testContainerImageName,
+      DaemonName: testDaemonName,
+    }
+
+    expectedTag := testDaemonName + "/" + testContainerImageName + "/" +
+                   testContainerName + "/" + testContainerID + "-" + testContainerImageID[:12]
+    expectedSourceCategory := "testSourceCategory:" + expectedTag + "/test"
+
+
+    testSumoDriver := newSumoDriver()
+    assert.Equal(t, 0, len(testSumoDriver.loggers), "there should be no loggers when the driver is initialized")
+
+    testSumoLogger, err := testSumoDriver.NewSumoLogger(filePath, info)
+    assert.Nil(t, err)
+    assert.Equal(t, 1, len(testSumoDriver.loggers),
+      "there should be one logger after calling StartLogging on driver")
+    assert.Equal(t, expectedTag, testSumoLogger.tag,
+      "tag specified, should be expected value")
+    assert.Equal(t, expectedSourceCategory, testSumoLogger.sourceCategory,
+      "sourceCategory specified, should be expected value")
   })
 }
