@@ -47,12 +47,14 @@ func TestDriversDefaultConfig (t *testing.T) {
   }
 
   testContainerID := "12345678901234567890"
+  testContainerName := "test_container_name"
 
   info := logger.Info{
     Config: map[string]string{
       logOptUrl: testHttpSourceUrl,
     },
     ContainerID: testContainerID,
+    ContainerName: testContainerName,
   }
 
   t.Run("NewSumoLogger", func(t *testing.T) {
@@ -72,6 +74,7 @@ func TestDriversDefaultConfig (t *testing.T) {
     assert.Nil(t, testSumoLogger1.proxyUrl, "proxy url not specified, should be default value")
     assert.Equal(t, testContainerID[:12], testSumoLogger1.tag, "tag not specified, should be default value")
     assert.Equal(t, defaultSourceCategory, testSumoLogger1.sourceCategory, "source category not specified, should be default value")
+    assert.Equal(t, testContainerName, testSumoLogger1.sourceName, "source name not specified, should be default value")
 
     _, err = testSumoDriver.NewSumoLogger(filePath1, info)
     assert.Error(t, err, "trying to call StartLogging for filepath that already exists should return error")
@@ -514,7 +517,7 @@ func TestDriversLogOpts (t *testing.T) {
     assert.Equal(t, testTlsConfig, testSumoLogger.tlsConfig, "tls config options specified, should be specified value")
   })
 
-  t.Run("NewSumoLogger with tag and sourceCategory", func(t *testing.T) {
+  t.Run("NewSumoLogger with metadata", func(t *testing.T) {
     testContainerID := "123456789012345678901234567890"
     testContainerName := "testContainerName"
     testContainerImageID := "987654321098765432109876543210"
@@ -524,12 +527,16 @@ func TestDriversLogOpts (t *testing.T) {
     testTag := "{{.DaemonName}}/{{.ImageName}}/{{.Name}}/{{.FullID}}-{{.ImageID}}"
 
     testSourceCategory := "testSourceCategory:{{.Tag}}/test"
+    testSourceName := "{{.Tag}}/test"
+    testSourceHost := "/test/{{.Tag}}"
 
     info := logger.Info{
       Config: map[string]string{
         logOptUrl: testHttpSourceUrl,
         "tag": testTag,
         logOptSourceCategory: testSourceCategory,
+        logOptSourceName: testSourceName,
+        logOptSourceHost: testSourceHost,
       },
       ContainerID: testContainerID,
       ContainerName: testContainerName,
@@ -541,7 +548,8 @@ func TestDriversLogOpts (t *testing.T) {
     expectedTag := testDaemonName + "/" + testContainerImageName + "/" +
                    testContainerName + "/" + testContainerID + "-" + testContainerImageID[:12]
     expectedSourceCategory := "testSourceCategory:" + expectedTag + "/test"
-
+    expectedSourceName := expectedTag + "/test"
+    expectedSourceHost := "/test/" + expectedTag
 
     testSumoDriver := newSumoDriver()
     assert.Equal(t, 0, len(testSumoDriver.loggers), "there should be no loggers when the driver is initialized")
@@ -554,5 +562,9 @@ func TestDriversLogOpts (t *testing.T) {
       "tag specified, should be expected value")
     assert.Equal(t, expectedSourceCategory, testSumoLogger.sourceCategory,
       "sourceCategory specified, should be expected value")
+    assert.Equal(t, expectedSourceName, testSumoLogger.sourceName,
+      "sourceName specified, should be expected value")
+    assert.Equal(t, expectedSourceHost, testSumoLogger.sourceHost,
+      "sourceHost specified, should be expected value")
   })
 }

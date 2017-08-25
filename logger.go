@@ -163,7 +163,8 @@ func (sumoLogger *sumoLogger) sendLogs(logs []*sumoLog) error {
     request.Header.Add("Content-Encoding", "gzip")
   }
   request.Header.Add("X-Sumo-Category", sumoLogger.sourceCategory)
-  request.Header.Add("X-Sumo-Name", sumoLogger.info.ContainerName)
+  request.Header.Add("X-Sumo-Name", sumoLogger.sourceName)
+  request.Header.Add("X-Sumo-Host", sumoLogger.sourceHost)
 
   response, err := sumoLogger.httpClient.Do(request)
   if err != nil {

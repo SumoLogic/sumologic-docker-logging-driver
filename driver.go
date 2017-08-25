@@ -56,6 +56,10 @@ const (
   logOptBatchSize = "sumo-batch-size"
   /* The _sourceCategory. Default is "dockerlog" */
   logOptSourceCategory = "sumo-source-category"
+  /* The _sourceName. Default is container name */
+  logOptSourceName = "sumo-source-name"
+  /* The _sourceHost. Default is machine host name */
+  logOptSourceHost = "sumo-source-host"
 
   defaultGzipCompression = true
   defaultGzipCompressionLevel = gzip.DefaultCompression
@@ -103,6 +107,8 @@ type sumoLogger struct {
   info logger.Info
   tag string
   sourceCategory string
+  sourceName string
+  sourceHost string
 }
 
 func newSumoDriver() *sumoDriver {
@@ -130,18 +136,19 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
   }
   sumoDriver.mu.Unlock()
 
+  hostname, err := info.Hostname()
+  if err != nil {
+    return nil, fmt.Errorf("%s: cannot access hostname to set source field", pluginName)
+  }
+
   tag, err := loggerutils.ParseLogTag(info, loggerutils.DefaultTemplate)
   if err != nil {
     return nil, err
   }
 
-  sourceCategory := defaultSourceCategory
-  if sourceCategoryCustom, exists := info.Config[logOptSourceCategory]; exists {
-    sourceCategory = sourceCategoryCustom
-    if strings.Contains(sourceCategoryCustom, "{{.Tag}}") {
-      sourceCategory = strings.Join(strings.Split(sourceCategoryCustom, "{{.Tag}}"), tag)
-    }
-  }
+  sourceCategory := parseLogOptMetadataWithTag(info, logOptSourceCategory, defaultSourceCategory, tag)
+  sourceName := parseLogOptMetadataWithTag(info, logOptSourceName, info.ContainerName, tag)
+  sourceHost := parseLogOptMetadataWithTag(info, logOptSourceHost, hostname, tag)
 
   gzipCompression := parseLogOptBoolean(info, logOptGzipCompression, defaultGzipCompression)
   gzipCompressionLevel := parseLogOptGzipCompressionLevel(info, logOptGzipCompressionLevel, defaultGzipCompressionLevel)
@@ -196,6 +203,8 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
     info: info,
     tag: tag,
     sourceCategory: sourceCategory,
+    sourceName: sourceName,
+    sourceHost: sourceHost,
   }
 
   sumoDriver.mu.Lock()
@@ -215,6 +224,16 @@ func (sumoDriver *sumoDriver) StopLogging(file string) error {
   }
   sumoDriver.mu.Unlock()
   return nil
+}
+
+func parseLogOptMetadataWithTag(info logger.Info, logOptKey string, defaultValue string, tag string) string {
+  if input, exists := info.Config[logOptKey]; exists {
+    if strings.Contains(input, "{{.Tag}}") {
+      return strings.Join(strings.Split(input, "{{.Tag}}"), tag)
+    }
+    return input
+  }
+  return defaultValue
 }
 
 func parseLogOptIntPositive(info logger.Info, logOptKey string, defaultValue int) int {
