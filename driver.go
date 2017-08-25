@@ -134,7 +134,6 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
   if err != nil {
     return nil, err
   }
-  logrus.Info(tag)
 
   sourceCategory := defaultSourceCategory
   if sourceCategoryCustom, exists := info.Config[logOptSourceCategory]; exists {
@@ -143,7 +142,6 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
       sourceCategory = strings.Join(strings.Split(sourceCategoryCustom, "{{.Tag}}"), tag)
     }
   }
-  logrus.Info(sourceCategory)
 
   gzipCompression := parseLogOptBoolean(info, logOptGzipCompression, defaultGzipCompression)
   gzipCompressionLevel := parseLogOptGzipCompressionLevel(info, logOptGzipCompressionLevel, defaultGzipCompressionLevel)
