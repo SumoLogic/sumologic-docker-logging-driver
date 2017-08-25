@@ -131,9 +131,9 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
   sumoDriver.mu.Unlock()
 
   tag, err := loggerutils.ParseLogTag(info, loggerutils.DefaultTemplate)
-	if err != nil {
-		return nil, err
-	}
+  if err != nil {
+    return nil, err
+  }
   logrus.Info(tag)
 
   sourceCategory := defaultSourceCategory
