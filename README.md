@@ -40,7 +40,9 @@ To specify additional logging driver options, you can use the `--log-opt NAME=VA
 | Option                    | Required? | Default Value | Description
 | ------------------------- | :-------: | :-----------: | -------------------------------------- |
 | sumo-url                  | Yes       |               | HTTP Source URL
-| sumo-source-category      | No        | `dockerlog` | Source category to appear when searching on Sumo Logic by `_sourceCategory`. To include the log tag in the source category, use `{{.Tag}}`; see `tag`.
+| sumo-source-category      | No        | `dockerlog`   | Source category to appear when searching on Sumo Logic by `_sourceCategory`. To include the log tag in the source category, use `{{.Tag}}`; see `tag`.
+| sumo-source-name          | No        |               | Source name to appear when searching on Sumo Logic by `_sourceName`. To include the log tag in the source name, use `{{.Tag}}`; see `tag`. Default is the container name.
+| sumo-source-host          | No        |               | Source host to appear when searching on Sumo Logic by `_sourceHost`. To include the log tag in the source host, use `{{.Tag}}`; see `tag`. Default is the machine host name.
 | sumo-compress             | No        | true          | Enable/disable gzip compression. Boolean.
 | sumo-compress-level       | No        | -1            | Set the gzip compression level. Valid values are -1 (default), 0 (no compression), 1 (best speed) ... 9 (best compression).
 | sumo-batch-size           | No        | 1000000       | The number of bytes of logs the driver should wait for before sending them in bulk. If the number of bytes never reaches `sumo-batch-size`, the driver will send the logs in smaller batches at predefined intervals; see `sumo-sending-interval`.
@@ -63,7 +65,7 @@ $ docker run --log-driver=sumologic \
     --log-opt sumo-queue-size=400 \
     --log-opt sumo-sending-frequency=500ms \
     --log-opt sumo-compress=false \
-    --log-opt ...
+    --log-opt ... \
     your/container
 ```
 
