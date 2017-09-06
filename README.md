@@ -2,7 +2,7 @@
 
 A Docker logging driver plugin to send logs to Sumo Logic.
 
-**Disclaimer:** This plugin is still being developed.  We recommend using this plugin in non-production environments.
+**Disclaimer:** This plugin is still being developed. We recommend using this plugin in non-production environments.
 
 **Note:** Docker plugins are not yet supported on Windows; see Docker's logging driver plugin [documentation].
 
@@ -22,7 +22,7 @@ ID              NAME               DESCRIPTION                 ENABLED
 cb0021522669    sumologic:latest   SumoLogic logging driver    true
 ```
 
-### Create an HTTP Metrics Source in Sumo Logic
+### Create HTTP Source in Sumo Logic
 Create a [Sumo Logic account](https://www.sumologic.com/) if you don't currently have one.
 
 Follow these instructions for [setting up an HTTP Source](https://help.sumologic.com/Send-Data/Sources/02Sources-for-Hosted-Collectors/HTTP-Source/zGenerate-a-new-URL-for-an-HTTP-Source) in Sumo Logic.  Be sure to obtain the URL endpoint after creating an HTTP Source.
@@ -40,9 +40,9 @@ To specify additional logging driver options, you can use the `--log-opt NAME=VA
 | Option                    | Required? | Default Value | Description
 | ------------------------- | :-------: | :-----------: | -------------------------------------- |
 | sumo-url                  | Yes       |               | HTTP Source URL
-| sumo-source-category      | No        | `dockerlog`   | Source category to appear when searching on Sumo Logic by `_sourceCategory`. To include the log tag in the source category, use `{{.Tag}}`; see `tag`.
-| sumo-source-name          | No        |               | Source name to appear when searching on Sumo Logic by `_sourceName`. To include the log tag in the source name, use `{{.Tag}}`; see `tag`. Default is the container name.
-| sumo-source-host          | No        |               | Source host to appear when searching on Sumo Logic by `_sourceHost`. To include the log tag in the source host, use `{{.Tag}}`; see `tag`. Default is the machine host name.
+| sumo-source-category      | No        |               | Source category to appear when searching on Sumo Logic by `_sourceCategory`. Use `{{Tag}}` as the placeholder of `tag` option. If not specified, the source category of HTTP source will be used
+| sumo-source-name          | No        |               | Source name to appear when searching on Sumo Logic by `_sourceName`. Use `{{Tag}}` as the placeholder of `tag` option. If not specified, it will be the container's name
+| sumo-source-host          | No        |               | Source host to appear when searching on Sumo Logic by `_sourceHost`. Use `{{Tag}}` as the placeholder of `tag` option. If not specified, it will be the machine host name
 | sumo-compress             | No        | true          | Enable/disable gzip compression. Boolean.
 | sumo-compress-level       | No        | -1            | Set the gzip compression level. Valid values are -1 (default), 0 (no compression), 1 (best speed) ... 9 (best compression).
 | sumo-batch-size           | No        | 1000000       | The number of bytes of logs the driver should wait for before sending them in bulk. If the number of bytes never reaches `sumo-batch-size`, the driver will send the logs in smaller batches at predefined intervals; see `sumo-sending-interval`.
@@ -52,7 +52,7 @@ To specify additional logging driver options, you can use the `--log-opt NAME=VA
 | sumo-root-ca-path         | No        |               | Set the path to a custom root certificate.
 | sumo-server-name          | No        |               | Name used to validate the server certificate. By default, uses hostname of the `sumo-url`.
 | sumo-queue-size           | No        | 100           | The maximum number of log batches of size `sumo-batch-size` we can store in memory in the event of network failure, before we begin dropping batches. Thus in the worst case, the plugin will use `sumo-batch-size` * `sumo-queue-size` bytes of memory per container (default 100 MB).
-| tag                       | No        |               | Specify a tag for messages, which interprets some markup. Default value is {{.ID}} (first 12 characters of the container ID). Refer to the [tag log-opt documentation] for customizing the log tag format.
+| tag                       | No        | {{.ID}}       | Specify a tag for messages, which interprets some markup. Default value is {{.ID}} (first 12 characters of the container ID). Refer to the [tag log-opt documentation] for customizing the log tag format.
 
 [tag log-opt documentation]: https://docs.docker.com/engine/admin/logging/log_tags/
 

@@ -77,8 +77,8 @@ func TestConsumeLogsFromFile(t *testing.T) {
     assert.Equal(t, testIsPartial, consumedLog.isPartial, "should read the correct log partial")
   })
 
-  t.Run("testLogCount=100000", func(t *testing.T) {
-    testLogsCount := 100000
+  t.Run("testLogCount=1000", func(t *testing.T) {
+    testLogsCount := 1000
     go func() {
       for i := 0; i < testLogsCount; i++ {
         enc.Encode(testLogMessage)

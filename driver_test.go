@@ -29,6 +29,9 @@ const (
   testSource = "sumo-test"
   testTime = 1234567890
   testIsPartial = false
+
+  testContainerID = "12345678901234567890"
+  testContainerName = "/test_container_name"
 )
 
 var (
@@ -45,9 +48,6 @@ func TestDriversDefaultConfig (t *testing.T) {
     defer testFifo.Close()
     defer os.Remove(filePath + strconv.Itoa(i + 1))
   }
-
-  testContainerID := "12345678901234567890"
-  testContainerName := "test_container_name"
 
   info := logger.Info{
     Config: map[string]string{
@@ -73,8 +73,7 @@ func TestDriversDefaultConfig (t *testing.T) {
     assert.Equal(t, &tls.Config{}, testSumoLogger1.tlsConfig, "tls configs not specified, should be default value")
     assert.Nil(t, testSumoLogger1.proxyUrl, "proxy url not specified, should be default value")
     assert.Equal(t, testContainerID[:12], testSumoLogger1.tag, "tag not specified, should be default value")
-    assert.Equal(t, defaultSourceCategory, testSumoLogger1.sourceCategory, "source category not specified, should be default value")
-    assert.Equal(t, testContainerName, testSumoLogger1.sourceName, "source name not specified, should be default value")
+    assert.Equal(t, "test_container_name", testSumoLogger1.sourceName, "source name not specified, should be default value")
 
     _, err = testSumoDriver.NewSumoLogger(filePath1, info)
     assert.Error(t, err, "trying to call StartLogging for filepath that already exists should return error")
@@ -172,7 +171,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -204,7 +204,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testTlsConfigNoInsecureSkipVerify := &tls.Config{
@@ -242,7 +243,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -274,7 +276,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -306,7 +309,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -338,7 +342,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -370,7 +375,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -402,7 +408,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: "2ooo",
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -434,7 +441,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: "-2000",
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -466,7 +474,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: "2ooo",
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -498,7 +507,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: "-2000",
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -526,9 +536,9 @@ func TestDriversLogOpts (t *testing.T) {
 
     testTag := "{{.DaemonName}}/{{.ImageName}}/{{.Name}}/{{.FullID}}-{{.ImageID}}"
 
-    testSourceCategory := "testSourceCategory:{{.Tag}}/test"
-    testSourceName := "{{.Tag}}/test"
-    testSourceHost := "/test/{{.Tag}}"
+    testSourceCategory := "testSourceCategory:{{Tag}}/test/{{Tag}}" // interpret all tag
+    testSourceName := "{{TAG}}/test" // case ignore
+    testSourceHost := "/test/{{tag}}{{foo}}{{bar}}" // replace unknown with empty
 
     info := logger.Info{
       Config: map[string]string{
@@ -539,7 +549,7 @@ func TestDriversLogOpts (t *testing.T) {
         logOptSourceHost: testSourceHost,
       },
       ContainerID: testContainerID,
-      ContainerName: testContainerName,
+      ContainerName: "/" + testContainerName,
       ContainerImageID: testContainerImageID,
       ContainerImageName: testContainerImageName,
       DaemonName: testDaemonName,
@@ -547,7 +557,7 @@ func TestDriversLogOpts (t *testing.T) {
 
     expectedTag := testDaemonName + "/" + testContainerImageName + "/" +
                    testContainerName + "/" + testContainerID + "-" + testContainerImageID[:12]
-    expectedSourceCategory := "testSourceCategory:" + expectedTag + "/test"
+    expectedSourceCategory := "testSourceCategory:" + expectedTag + "/test/" + expectedTag
     expectedSourceName := expectedTag + "/test"
     expectedSourceHost := "/test/" + expectedTag
 

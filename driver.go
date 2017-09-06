@@ -10,6 +10,7 @@ import (
   "io/ioutil"
   "net/http"
   "net/url"
+  "regexp"
   "strconv"
   "strings"
   "sync"
@@ -54,11 +55,11 @@ const (
     If the number of bytes never reaches the batch size, the driver will send the logs in smaller
     batches at predefined intervals; see sending interval. */
   logOptBatchSize = "sumo-batch-size"
-  /* The _sourceCategory. Default is "dockerlog" */
+  /* The _sourceCategory. If empty, the category of HTTP source will be used */
   logOptSourceCategory = "sumo-source-category"
-  /* The _sourceName. Default is container name */
+  /* The _sourceName. If empty, will be the container's name */
   logOptSourceName = "sumo-source-name"
-  /* The _sourceHost. Default is machine host name */
+  /* The _sourceHost. If empty, will be the machine host name */
   logOptSourceHost = "sumo-source-host"
 
   defaultGzipCompression = true
@@ -68,8 +69,6 @@ const (
   defaultSendingIntervalMs = 2000 * time.Millisecond
   defaultQueueSizeItems = 100
   defaultBatchSizeBytes = 1000000
-
-  defaultSourceCategory = "dockerlog"
 
   fileMode = 0700
 )
@@ -136,6 +135,11 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
   }
   sumoDriver.mu.Unlock()
 
+  sumoUrl := parseLogOptUrl(info, logOptUrl)
+  if sumoUrl == nil {
+    return nil, fmt.Errorf("%s: sumo-url must exist and be a valid URL", pluginName)
+  }
+
   hostname, err := info.Hostname()
   if err != nil {
     return nil, fmt.Errorf("%s: cannot access hostname to set source field", pluginName)
@@ -146,9 +150,13 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
     return nil, err
   }
 
-  sourceCategory := parseLogOptMetadataWithTag(info, logOptSourceCategory, defaultSourceCategory, tag)
-  sourceName := parseLogOptMetadataWithTag(info, logOptSourceName, info.ContainerName, tag)
-  sourceHost := parseLogOptMetadataWithTag(info, logOptSourceHost, hostname, tag)
+  dictionary := map[string]string {
+    "tag": tag,
+  }
+
+  sourceCategory := parseLogOptMetadata(info, logOptSourceCategory, "", dictionary)
+  sourceName := parseLogOptMetadata(info, logOptSourceName, info.ContainerName[1:len(info.ContainerName)], dictionary) // trim leading "/"
+  sourceHost := parseLogOptMetadata(info, logOptSourceHost, hostname, dictionary)
 
   gzipCompression := parseLogOptBoolean(info, logOptGzipCompression, defaultGzipCompression)
   gzipCompressionLevel := parseLogOptGzipCompressionLevel(info, logOptGzipCompressionLevel, defaultGzipCompressionLevel)
@@ -169,7 +177,7 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
   }
 
   transport := &http.Transport{}
-  proxyUrl := parseLogOptProxyUrl(info, logOptProxyUrl, nil)
+  proxyUrl := parseLogOptUrl(info, logOptProxyUrl)
   transport.Proxy = http.ProxyURL(proxyUrl)
   transport.TLSClientConfig = tlsConfig
 
@@ -189,7 +197,7 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
   }
 
   newSumoLogger := &sumoLogger{
-    httpSourceUrl: info.Config[logOptUrl],
+    httpSourceUrl: sumoUrl.String(),
     httpClient: httpClient,
     proxyUrl: proxyUrl,
     tlsConfig: tlsConfig,
@@ -226,12 +234,27 @@ func (sumoDriver *sumoDriver) StopLogging(file string) error {
   return nil
 }
 
-func parseLogOptMetadataWithTag(info logger.Info, logOptKey string, defaultValue string, tag string) string {
+func interpretAll(re *regexp.Regexp, input string, dictionary map[string]string) string {
+  result := ""
+  lastIndex := 0
+
+  for _, v := range re.FindAllSubmatchIndex([]byte(input), -1) {
+      groups := []string{}
+      for i := 0; i < len(v); i += 2 {
+        groups = append(groups, input[v[i]:v[i + 1]])
+      }
+
+      result += input[lastIndex:v[0]] + dictionary[strings.ToLower(groups[1])] // groups[0] represents the whole pattern, groups[1] is the first capture group
+      lastIndex = v[1]
+  }
+
+  return result + input[lastIndex:]
+}
+
+func parseLogOptMetadata(info logger.Info, logOptKey string, defaultValue string, dictionary map[string]string) string {
   if input, exists := info.Config[logOptKey]; exists {
-    if strings.Contains(input, "{{.Tag}}") {
-      return strings.Join(strings.Split(input, "{{.Tag}}"), tag)
-    }
-    return input
+    re := regexp.MustCompile(`(?i)\{\{(.*?)\}\}`) // needs to be a lazy match
+    return interpretAll(re, input, dictionary)
   }
   return defaultValue
 }
@@ -287,17 +310,17 @@ func parseLogOptBoolean(info logger.Info, logOptKey string, defaultValue bool) b
   return defaultValue
 }
 
-func parseLogOptProxyUrl(info logger.Info, logOptKey string, defaultValue *url.URL) *url.URL {
+func parseLogOptUrl(info logger.Info, logOptKey string) *url.URL {
   if input, exists := info.Config[logOptKey]; exists {
     inputValue, err := url.Parse(input)
     if err != nil {
-      logrus.Error(fmt.Errorf("%s: Failed to parse value of %s as url. Initializing without proxy. %v",
-        pluginName, logOptKey, defaultValue, err))
-      return defaultValue
+      logrus.Error(fmt.Errorf("%s: Failed to parse value of %s as url. %v",
+        pluginName, logOptKey, err))
+      return nil
     }
     return inputValue
   }
-  return defaultValue
+  return nil
 }
 
 func parseLogOptGzipCompressionLevel(info logger.Info, logOptKey string, defaultValue int) int {
