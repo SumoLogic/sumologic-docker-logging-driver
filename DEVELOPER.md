@@ -1,6 +1,6 @@
 # Guide for developers
-This project is a plugin working in docker engine for delivering log to Sumo Logic cloud service through HTTP source.
-This is the guide for developers want build and extend the plugin. If you just want use this plugin in your docker environment, please refer to the [readme file](README.md).
+This project is a plugin for the docker engine, which delivers logs to Sumo Logic by pushing log messages through an HTTP source.
+This is the guide for developers who want build and extend the plugin. If you just want use this plugin in your docker environment, please refer to the [readme file](README.md).
 
 ## Prerequisite
   * [Download](https://www.docker.com/get-docker) and install latest docker engine
@@ -16,7 +16,7 @@ In bash, run:
 ```bash
 $ sudo bash ./plugin_install.sh
 ```
-If everything goes fine, you can verify the plugin correctly installed with:
+If everything goes fine, you can verify that the plugin is correctly installed with:
 ```bash
 $ docker plugin ls
 ID                  NAME                DESCRIPTION                 ENABLED
@@ -35,10 +35,10 @@ $ sudo bash ./plugin_uninstall.sh
 ```bash
 $ docker run --log-driver=sumologic --log-opt sumo-url=<url> -i -t ubuntu bash
 ```
-This will create a bash session in docker container and send all console contents to Sumo HTTP source as log lines
+This will create a bash session in a docker container and send all console contents to a Sumo Logic HTTP source as log lines
 
 ## Run unit test
-The unit test is written in `XXX_test.go` which `XXX` is the module to be tested. You can launch all unite tests with:
+The unit test is written in `XXX_test.go` which `XXX` is the module to be tested. You can launch all unit tests with:
 ```bash
 $ go test -v
 ```
