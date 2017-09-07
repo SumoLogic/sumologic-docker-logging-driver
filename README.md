@@ -2,8 +2,6 @@
 
 A Docker logging driver plugin to send logs to Sumo Logic.
 
-**Disclaimer:** This plugin is still being developed. We recommend using this plugin in non-production environments.
-
 **Note:** Docker plugins are not yet supported on Windows; see Docker's logging driver plugin [documentation].
 
 [documentation]: https://github.com/docker/cli/blob/master/docs/extend/plugins_logging.md
