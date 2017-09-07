@@ -165,8 +165,13 @@ func (sumoLogger *sumoLogger) sendLogs(logs []*sumoLog) error {
   if sumoLogger.sourceCategory != "" {
     request.Header.Add("X-Sumo-Category", sumoLogger.sourceCategory)
   }
-  request.Header.Add("X-Sumo-Name", sumoLogger.sourceName)
-  request.Header.Add("X-Sumo-Host", sumoLogger.sourceHost)
+  if sumoLogger.sourceName != "" {
+    request.Header.Add("X-Sumo-Name", sumoLogger.sourceName)
+  }
+  if sumoLogger.sourceHost != "" {
+    request.Header.Add("X-Sumo-Host", sumoLogger.sourceHost)
+  }
+  request.Header.Add("X-Sumo-Client", "docker-logging-driver")
 
   response, err := sumoLogger.httpClient.Do(request)
   if err != nil {

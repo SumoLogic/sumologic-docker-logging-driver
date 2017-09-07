@@ -66,7 +66,7 @@ const (
   defaultGzipCompressionLevel = gzip.DefaultCompression
   defaultInsecureSkipVerify = false
 
-  defaultSendingIntervalMs = 2000 * time.Millisecond
+  defaultSendingInterval = 2000 * time.Millisecond
   defaultQueueSizeItems = 100
   defaultBatchSizeBytes = 1000000
 
@@ -142,7 +142,7 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
 
   hostname, err := info.Hostname()
   if err != nil {
-    return nil, fmt.Errorf("%s: cannot access hostname to set source field", pluginName)
+    hostname = ""
   }
 
   tag, err := loggerutils.ParseLogTag(info, loggerutils.DefaultTemplate)
@@ -186,7 +186,7 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
     Timeout: 30 * time.Second,
   }
 
-  sendingInterval := parseLogOptDuration(info, logOptSendingInterval, defaultSendingIntervalMs)
+  sendingInterval := parseLogOptDuration(info, logOptSendingInterval, defaultSendingInterval)
   queueSize := parseLogOptIntPositive(info, logOptQueueSize, defaultQueueSizeItems)
   batchSize := parseLogOptIntPositive(info, logOptBatchSize, defaultBatchSizeBytes)
 
@@ -269,7 +269,7 @@ func parseLogOptIntPositive(info logger.Info, logOptKey string, defaultValue int
     }
     inputValue := int(inputValue64)
     if inputValue <= 0 {
-      logrus.Error(fmt.Errorf("%s: %s must be a positive value, got %d. Using default %d.",
+      logrus.Error(fmt.Errorf("%s: %s must be a positive value, got %d. Using default %d",
         pluginName, logOptKey, inputValue, defaultValue))
       return defaultValue
     }
@@ -288,7 +288,7 @@ func parseLogOptDuration(info logger.Info, logOptKey string, defaultValue time.D
     }
     zeroSeconds, _ := time.ParseDuration("0s")
     if inputValue <= zeroSeconds {
-      logrus.Error(fmt.Errorf("%s: %s must be a positive duration, got %s. Using default %s.",
+      logrus.Error(fmt.Errorf("%s: %s must be a positive duration, got %s. Using default %s",
         pluginName, logOptKey, inputValue.String(), defaultValue.String()))
       return defaultValue
     }
@@ -334,7 +334,7 @@ func parseLogOptGzipCompressionLevel(info logger.Info, logOptKey string, default
     inputValue := int(inputValue64)
     if inputValue < defaultValue || inputValue > gzip.BestCompression {
       logrus.Error(fmt.Errorf(
-        "%s: Not supported level '%d' for %s (supported values between %d and %d). Using default compression.",
+        "%s: Not supported level '%d' for %s (supported values between %d and %d). Using default compression",
         pluginName, inputValue, logOptKey, defaultValue, gzip.BestCompression))
       return defaultValue
     }
