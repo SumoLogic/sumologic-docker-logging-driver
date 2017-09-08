@@ -2,8 +2,6 @@
 
 A Docker logging driver plugin to send logs to Sumo Logic.
 
-**Disclaimer:** This plugin is still being developed.  We recommend using this plugin in non-production environments.
-
 **Note:** Docker plugins are not yet supported on Windows; see Docker's logging driver plugin [documentation].
 
 [documentation]: https://github.com/docker/cli/blob/master/docs/extend/plugins_logging.md
@@ -22,7 +20,7 @@ ID              NAME               DESCRIPTION                 ENABLED
 cb0021522669    sumologic:latest   SumoLogic logging driver    true
 ```
 
-### Create an HTTP Metrics Source in Sumo Logic
+### Create HTTP Source in Sumo Logic
 Create a [Sumo Logic account](https://www.sumologic.com/) if you don't currently have one.
 
 Follow these instructions for [setting up an HTTP Source](https://help.sumologic.com/Send-Data/Sources/02Sources-for-Hosted-Collectors/HTTP-Source/zGenerate-a-new-URL-for-an-HTTP-Source) in Sumo Logic.  Be sure to obtain the URL endpoint after creating an HTTP Source.
@@ -37,18 +35,24 @@ $ docker run --log-driver=sumologic --log-opt sumo-url=https://<deployment>.sumo
 ### Sumo Logic Options
 To specify additional logging driver options, you can use the `--log-opt NAME=VALUE` flag.
 
-| Option                      | Required? | Default Value | Description
-| --------------------------- | :-------: | :-----------: | -------------------------------------- |
-| sumo-url                  | Yes       |               | HTTP Source URL
-| sumo-compress             | No        | true          | Enable/disable gzip compression. Boolean.
-| sumo-compress-level       | No        | -1            | Set the gzip compression level. Valid values are -1 (default), 0 (no compression), 1 (best speed) ... 9 (best compression).
-| sumo-batch-size           | No        | 1000000       | The number of bytes of logs the driver should wait for before sending them in bulk. If the number of bytes never reaches `sumo-batch-size`, the driver will send the logs in smaller batches at predefined intervals; see `sumo-sending-interval`.
-| sumo-sending-interval     | No        | 2s            | The maximum time the driver waits for number of logs to reach `sumo-batch-size` before sending the logs, even if the number of logs is less than the batch size. In the format 72h3m5s, valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
-| sumo-proxy-url            | No        |               | Set a proxy URL.
-| sumo-insecure-skip-verify | No        | false         | Ignore server certificate validation. Boolean.
-| sumo-root-ca-path         | No        |               | Set the path to a custom root certificate.
-| sumo-server-name          | No        |               | Name used to validate the server certificate. By default, uses hostname of the `sumo-url`.
-| sumo-queue-size           | No        | 100           | The maximum number of log batches of size `sumo-batch-size` we can store in memory in the event of network failure, before we begin dropping batches. Thus in the worst case, the plugin will use `sumo-batch-size` * `sumo-queue-size` bytes of memory per container (default 100 MB).
+| Option                    | Required? | Default Value        | Description
+| ------------------------- | :-------: | :------------------: | -------------------------------------- |
+| sumo-url                  | Yes       |                      | HTTP Source URL
+| sumo-source-category      | No        | HTTP source category | Source category to appear when searching in Sumo Logic by `_sourceCategory`. Within the source category, the token `{{Tag}}` will be replaced with the value of the Docker tag option. If not specified, the default source category configured for the HTTP source will be used.
+| sumo-source-name          | No        | container's name     | Source name to appear when searching in Sumo Logic by `_sourceName`. Within the source name, the token `{{Tag}}` will be replaced with the value of the Docker tag option. If not specified, the container's name will be used.
+| sumo-source-host          | No        | host name            | Source host to appear when searching in Sumo Logic by `_sourceHost`. Within the source host, the token `{{Tag}}` will be replaced with the value of the Docker tag option. If not specified, the machine host name will be used.
+| sumo-compress             | No        | `true`               | Enable/disable gzip compression. Boolean.
+| sumo-compress-level       | No        | `-1`                 | Set the gzip compression level. Valid values are -1 (default), 0 (no compression), 1 (best speed) ... 9 (best compression).
+| sumo-batch-size           | No        | `1000000`            | The number of bytes of logs the driver should wait for before sending them in bulk. If the number of bytes never reaches `sumo-batch-size`, the driver will send the logs in smaller batches at predefined intervals; see `sumo-sending-interval`.
+| sumo-sending-interval     | No        | `2s`                 | The maximum time the driver waits for number of logs to reach `sumo-batch-size` before sending the logs, even if the number of logs is less than the batch size. In the format 72h3m5s, valid time units are `ns`, `us` (or `µs`), `ms`, `s`, `m`, `h`.
+| sumo-proxy-url            | No        |                      | Set a proxy URL.
+| sumo-insecure-skip-verify | No        | `false`              | Ignore server certificate validation. Boolean.
+| sumo-root-ca-path         | No        |                      | Set the path to a custom root certificate.
+| sumo-server-name          | No        |                      | Name used to validate the server certificate. By default, uses hostname of the `sumo-url`.
+| sumo-queue-size           | No        | `100`                | The maximum number of log batches of size `sumo-batch-size` we can store in memory in the event of network failure, before we begin dropping batches. Thus in the worst case, the plugin will use `sumo-batch-size` * `sumo-queue-size` bytes of memory per container (default 100 MB).
+| tag                       | No        | `{{.ID}}`            | Specifies a tag for messages, which can be used in the "source category", "source name", and "source host" fields. Certain tokens of the form {{X}} are supported. Default value is `{{.ID}}`, the first 12 characters of the container ID. Refer to the [tag log-opt documentation] for more information and a list of supported tokens.
+
+[tag log-opt documentation]: https://docs.docker.com/engine/admin/logging/log_tags/
 
 ### Example
 
@@ -59,7 +63,7 @@ $ docker run --log-driver=sumologic \
     --log-opt sumo-queue-size=400 \
     --log-opt sumo-sending-frequency=500ms \
     --log-opt sumo-compress=false \
-    --log-opt ...
+    --log-opt ... \
     your/container
 ```
 

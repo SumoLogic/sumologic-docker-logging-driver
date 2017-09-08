@@ -29,6 +29,9 @@ const (
   testSource = "sumo-test"
   testTime = 1234567890
   testIsPartial = false
+
+  testContainerID = "12345678901234567890"
+  testContainerName = "/test_container_name"
 )
 
 var (
@@ -50,7 +53,8 @@ func TestDriversDefaultConfig (t *testing.T) {
     Config: map[string]string{
       logOptUrl: testHttpSourceUrl,
     },
-    ContainerID: "containeriid",
+    ContainerID: testContainerID,
+    ContainerName: testContainerName,
   }
 
   t.Run("NewSumoLogger", func(t *testing.T) {
@@ -63,11 +67,13 @@ func TestDriversDefaultConfig (t *testing.T) {
     assert.Equal(t, testHttpSourceUrl, testSumoLogger1.httpSourceUrl, "http source url should be configured correctly")
     assert.Equal(t, defaultGzipCompression, testSumoLogger1.gzipCompression, "compression not specified, should be false")
     assert.Equal(t, defaultGzipCompressionLevel, testSumoLogger1.gzipCompressionLevel, "compression level not specified, should be default value")
-    assert.Equal(t, defaultSendingIntervalMs, testSumoLogger1.sendingInterval, "sending interval not specified, should be default value")
+    assert.Equal(t, defaultSendingInterval, testSumoLogger1.sendingInterval, "sending interval not specified, should be default value")
     assert.Equal(t, defaultQueueSizeItems, cap(testSumoLogger1.logBatchQueue), "queue size not specified, should be default value")
     assert.Equal(t, defaultBatchSizeBytes, testSumoLogger1.batchSize, "batch size not specified, should be default value")
     assert.Equal(t, &tls.Config{}, testSumoLogger1.tlsConfig, "tls configs not specified, should be default value")
     assert.Nil(t, testSumoLogger1.proxyUrl, "proxy url not specified, should be default value")
+    assert.Equal(t, testContainerID[:12], testSumoLogger1.tag, "tag not specified, should be default value")
+    assert.Equal(t, "test_container_name", testSumoLogger1.sourceName, "source name not specified, should be default value")
 
     _, err = testSumoDriver.NewSumoLogger(filePath1, info)
     assert.Error(t, err, "trying to call StartLogging for filepath that already exists should return error")
@@ -146,7 +152,7 @@ func TestDriversLogOpts (t *testing.T) {
     ServerName: testServerName,
   }
 
-  testGzipCompression := true
+  testGzipCompression := false
   testGzipCompressionLevel := gzip.BestCompression
   testSendingInterval := time.Second
   testQueueSize := 2000
@@ -165,7 +171,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -197,7 +204,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testTlsConfigNoInsecureSkipVerify := &tls.Config{
@@ -235,7 +243,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -267,7 +276,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -299,7 +309,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -331,7 +342,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -343,7 +355,7 @@ func TestDriversLogOpts (t *testing.T) {
     assert.Equal(t, testHttpSourceUrl, testSumoLogger.httpSourceUrl, "http source url should be configured correctly")
     assert.Equal(t, testGzipCompression, testSumoLogger.gzipCompression, "compression specified, should be specified value")
     assert.Equal(t, testGzipCompressionLevel, testSumoLogger.gzipCompressionLevel, "compression level specified, should be specified value")
-    assert.Equal(t, defaultSendingIntervalMs, testSumoLogger.sendingInterval, "sending interval specified incorrectly, should be default value")
+    assert.Equal(t, defaultSendingInterval, testSumoLogger.sendingInterval, "sending interval specified incorrectly, should be default value")
     assert.Equal(t, testQueueSize, cap(testSumoLogger.logBatchQueue), "queue size specified, should be specified value")
     assert.Equal(t, testBatchSize, testSumoLogger.batchSize, "batch size specified, should be specified value")
     assert.Equal(t, testProxyUrl, testSumoLogger.proxyUrl, "proxy url specified, should be specified value")
@@ -363,7 +375,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -375,7 +388,7 @@ func TestDriversLogOpts (t *testing.T) {
     assert.Equal(t, testHttpSourceUrl, testSumoLogger.httpSourceUrl, "http source url should be configured correctly")
     assert.Equal(t, testGzipCompression, testSumoLogger.gzipCompression, "compression specified, should be specified value")
     assert.Equal(t, testGzipCompressionLevel, testSumoLogger.gzipCompressionLevel, "compression level specified, should be specified value")
-    assert.Equal(t, defaultSendingIntervalMs, testSumoLogger.sendingInterval, "sending interval specified incorrectly, should be default value")
+    assert.Equal(t, defaultSendingInterval, testSumoLogger.sendingInterval, "sending interval specified incorrectly, should be default value")
     assert.Equal(t, testQueueSize, cap(testSumoLogger.logBatchQueue), "queue size specified, should be specified value")
     assert.Equal(t, testBatchSize, testSumoLogger.batchSize, "batch size specified, should be specified value")
     assert.Equal(t, testProxyUrl, testSumoLogger.proxyUrl, "proxy url specified, should be specified value")
@@ -395,7 +408,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: "2ooo",
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -427,7 +441,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: "-2000",
         logOptBatchSize: strconv.Itoa(testBatchSize),
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -459,7 +474,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: "2ooo",
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -491,7 +507,8 @@ func TestDriversLogOpts (t *testing.T) {
         logOptQueueSize: strconv.Itoa(testQueueSize),
         logOptBatchSize: "-2000",
       },
-      ContainerID: "containeriid",
+      ContainerID: testContainerID,
+      ContainerName: testContainerName,
     }
 
     testSumoDriver := newSumoDriver()
@@ -508,5 +525,56 @@ func TestDriversLogOpts (t *testing.T) {
     assert.Equal(t, defaultBatchSizeBytes, testSumoLogger.batchSize, "batch size specified incorrectly, should be default value")
     assert.Equal(t, testProxyUrl, testSumoLogger.proxyUrl, "proxy url specified, should be specified value")
     assert.Equal(t, testTlsConfig, testSumoLogger.tlsConfig, "tls config options specified, should be specified value")
+  })
+
+  t.Run("NewSumoLogger with metadata", func(t *testing.T) {
+    testContainerID := "123456789012345678901234567890"
+    testContainerName := "testContainerName"
+    testContainerImageID := "987654321098765432109876543210"
+    testContainerImageName := "testContainerImageName"
+    testDaemonName := "testDaemonName"
+
+    testTag := "{{.DaemonName}}/{{.ImageName}}/{{.Name}}/{{.FullID}}-{{.ImageID}}"
+
+    testSourceCategory := "testSourceCategory:{{Tag}}/test/{{Tag}}" // interpret all tag
+    testSourceName := "{{TAG}}/test" // case ignore
+    testSourceHost := "/test/{{tag}}{{foo}}{{bar}}" // replace unknown with empty
+
+    info := logger.Info{
+      Config: map[string]string{
+        logOptUrl: testHttpSourceUrl,
+        "tag": testTag,
+        logOptSourceCategory: testSourceCategory,
+        logOptSourceName: testSourceName,
+        logOptSourceHost: testSourceHost,
+      },
+      ContainerID: testContainerID,
+      ContainerName: "/" + testContainerName,
+      ContainerImageID: testContainerImageID,
+      ContainerImageName: testContainerImageName,
+      DaemonName: testDaemonName,
+    }
+
+    expectedTag := testDaemonName + "/" + testContainerImageName + "/" +
+                   testContainerName + "/" + testContainerID + "-" + testContainerImageID[:12]
+    expectedSourceCategory := "testSourceCategory:" + expectedTag + "/test/" + expectedTag
+    expectedSourceName := expectedTag + "/test"
+    expectedSourceHost := "/test/" + expectedTag
+
+    testSumoDriver := newSumoDriver()
+    assert.Equal(t, 0, len(testSumoDriver.loggers), "there should be no loggers when the driver is initialized")
+
+    testSumoLogger, err := testSumoDriver.NewSumoLogger(filePath, info)
+    assert.Nil(t, err)
+    assert.Equal(t, 1, len(testSumoDriver.loggers),
+      "there should be one logger after calling StartLogging on driver")
+    assert.Equal(t, expectedTag, testSumoLogger.tag,
+      "tag specified, should be expected value")
+    assert.Equal(t, expectedSourceCategory, testSumoLogger.sourceCategory,
+      "sourceCategory specified, should be expected value")
+    assert.Equal(t, expectedSourceName, testSumoLogger.sourceName,
+      "sourceName specified, should be expected value")
+    assert.Equal(t, expectedSourceHost, testSumoLogger.sourceHost,
+      "sourceHost specified, should be expected value")
   })
 }
