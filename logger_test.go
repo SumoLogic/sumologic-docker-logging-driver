@@ -312,7 +312,7 @@ func TestSendLogs(t *testing.T) {
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
       logBatchQueue: testLogBatchQueue,
-      sendingInterval: defaultSendingIntervalMs,
+      sendingInterval: defaultSendingInterval,
       batchSize: defaultBatchSizeBytes,
     }
 
@@ -338,7 +338,7 @@ func TestSendLogs(t *testing.T) {
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
       logBatchQueue: testLogBatchQueue,
-      sendingInterval: defaultSendingIntervalMs,
+      sendingInterval: defaultSendingInterval,
       batchSize: defaultBatchSizeBytes,
     }
 
@@ -362,7 +362,7 @@ func TestSendLogs(t *testing.T) {
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
       logBatchQueue: testLogBatchQueue,
-      sendingInterval: defaultSendingIntervalMs,
+      sendingInterval: defaultSendingInterval,
       batchSize: defaultBatchSizeBytes,
     }
 
@@ -389,7 +389,7 @@ func TestSendLogs(t *testing.T) {
       httpSourceUrl: testHttpSourceUrl,
       httpClient: testClient,
       logBatchQueue: testLogBatchQueue,
-      sendingInterval: defaultSendingIntervalMs,
+      sendingInterval: defaultSendingInterval,
       batchSize: defaultBatchSizeBytes,
     }
 
