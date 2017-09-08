@@ -10,14 +10,28 @@ A Docker logging driver plugin to send logs to Sumo Logic.
 
 ### Install Plugin
 
-To install, run `plugin_install.sh`.
+Install the plugin (latest) from docker repository by running `docker plugin install`:
+
+```bash
+$ docker plugin install sumologic/docker-logging-driver
+
+Plugin "sumologic/docker-logging-driver" is requesting the following privileges:
+ - network: [host]
+Do you grant the above permissions? [y/N] y
+latest: Pulling from sumologic/docker-logging-driver
+e8aad069319f: Download complete
+Digest: sha256:764cdd72b451c4091d53e514f96d8499bf498e9ce8fc32d70b574c48d93b0cd4
+Status: Downloaded newer image for sumologic/docker-logging-driver:latest
+Installed plugin sumologic/docker-logging-driver
+```
 
 You can verify that the plugin `sumologic` has been installed and enabled by running `docker plugin ls`:
 
 ```bash
 $ docker plugin ls
-ID              NAME               DESCRIPTION                 ENABLED
-cb0021522669    sumologic:latest   SumoLogic logging driver    true
+
+ID                  NAME                                     DESCRIPTION                       ENABLED
+b72ceb1530ff        sumologic/docker-logging-driver:latest   Sumo Logic logging driver         true
 ```
 
 ### Create HTTP Source in Sumo Logic
@@ -29,7 +43,7 @@ Follow these instructions for [setting up an HTTP Source](https://help.sumologic
 Once installed, the plugin can be used as any other Docker logging driver.
 To run a specific container with the logging driver, you can use the `--log-driver` flag:
 ```bash
-$ docker run --log-driver=sumologic --log-opt sumo-url=https://<deployment>.sumologic.com/receiver/v1/http/<source_token>
+$ docker run --log-driver=sumologic/docker-logging-driver --log-opt sumo-url=https://<deployment>.sumologic.com/receiver/v1/http/<source_token>
 ```
 
 ### Sumo Logic Options
@@ -57,7 +71,7 @@ To specify additional logging driver options, you can use the `--log-opt NAME=VA
 ### Example
 
 ```bash
-$ docker run --log-driver=sumologic \
+$ docker run --log-driver=sumologic/docker-logging-driver \
     --log-opt sumo-url=https://<deployment>.sumologic.com/receiver/v1/http/<source_token> \
     --log-opt sumo-batch-size=2000000 \
     --log-opt sumo-queue-size=400 \
@@ -68,14 +82,14 @@ $ docker run --log-driver=sumologic \
 ```
 
 ### Setting Default Options
-To set the `sumologic` logging driver as the default, find the `daemon.json` file located in `/etc/docker` on Linux hosts.
+To set the `sumologic/docker-logging-driver` logging driver as the default, find the `daemon.json` file located in `/etc/docker` on Linux hosts.
 Set the `log-driver` and `log-opts` keys to the desired values and restart Docker for the changes to take effect. For more information about configuring Docker using `daemon.json`, see [daemon.json].
 
 [daemon.json]: https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file
 
 ```json
 {
-  "log-driver": "sumologic",
+  "log-driver": "sumologic/docker-logging-driver",
   "log-opts": {
     "sumo-url": "https://<deployment>.sumologic.com/receiver/v1/http/<source_token>"
   }
