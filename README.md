@@ -38,7 +38,8 @@ In this step you create, on the Sumo service, an HTTP endpoint to receive your D
 
 On each Docker host with containers from which you want to collect container logs, install the plugin by running the following command in a terminal window:
 
-`$ docker plugin install sumologic/docker-logging-driver`
+* `$ docker plugin install sumologic/docker-logging-driver` (with the latest version from docker hub)
+* `$ docker plugin install store/sumologic/docker-logging-driver:<ver>` (with the certified version from docker store)
 
 To verify that the plugin is installed and enabled, run the following command:
 
