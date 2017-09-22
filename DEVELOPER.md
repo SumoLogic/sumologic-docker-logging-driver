@@ -24,6 +24,11 @@ ID                  NAME                                     DESCRIPTION        
 b72ceb1530ff        sumologic/docker-logging-driver:latest   Sumo Logic logging driver         true
 ```
 
+You can also install it from docker hub repo (private)
+```
+$ docker plugin install sumologic/docker-logging-driver`
+```
+
 ## Uninstall and cleanup the plugin
 In bash, run:
 ```bash
