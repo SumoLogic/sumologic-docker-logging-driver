@@ -63,7 +63,7 @@ To use the Sumo  plugin, you need to configure one or more containers to use the
 
 To run a specific container with the logging driver:
 * Use the `--log-driver` flag to specify the plugin. 
-* Use the `--log-opts` flag to specify the URL for the HTTP source you created in Step 1. 
+* Use the `--log-opt` flag to specify the URL for the HTTP source you created in Step 1. 
 
 For example:
 
