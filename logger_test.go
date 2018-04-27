@@ -138,7 +138,7 @@ func TestBatchLogs(t *testing.T) {
     assert.Equal(t, 0, len(testLogBatchQueue), "should have emptied out the batch queue")
   })
 
-  t.Run("batchSize=200 bytes, testLogCount=100000", func(t *testing.T) {
+  t.Run("batchSize=200 bytes, testLogCount=1000", func(t *testing.T) {
     testBatchSize := 200
     testLogQueue := make(chan *sumoLog, 100 * defaultQueueSizeItems)
     testLogBatchQueue := make(chan *sumoLogBatch, defaultQueueSizeItems)
@@ -151,7 +151,7 @@ func TestBatchLogs(t *testing.T) {
     }
     go testSumoLogger.batchLogs()
 
-    testLogCount := 100000
+    testLogCount := 1000
     go func() {
       for i := 0; i < testLogCount; i++ {
         testLogQueue <- testSumoLog

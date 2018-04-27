@@ -18,6 +18,7 @@ import (
   "time"
 
   "github.com/docker/docker/daemon/logger"
+  "github.com/docker/docker/daemon/logger/jsonfilelog"
   "github.com/docker/docker/daemon/logger/loggerutils"
   "github.com/pkg/errors"
   "github.com/sirupsen/logrus"
@@ -76,10 +77,13 @@ const (
 type SumoDriver interface {
   StartLogging(string, logger.Info) error
   StopLogging(string) error
+  ReadLogs(logger.ReadConfig, logger.Info) (io.ReadCloser, error)
 }
 
 type sumoDriver struct {
   loggers map[string]*sumoLogger
+  /* map from container ID to sumoLogger */
+  indexes map[string]*sumoLogger
   mu sync.Mutex
 }
 
@@ -104,6 +108,7 @@ type sumoLogger struct {
   batchSize int
 
   info logger.Info
+  jsonLogger logger.Logger
   tag string
   sourceCategory string
   sourceName string
@@ -113,6 +118,7 @@ type sumoLogger struct {
 func newSumoDriver() *sumoDriver {
   return &sumoDriver{
     loggers: make(map[string]*sumoLogger),
+    indexes: make(map[string]*sumoLogger),
   }
 }
 
@@ -190,6 +196,12 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
   queueSize := parseLogOptIntPositive(info, logOptQueueSize, defaultQueueSizeItems)
   batchSize := parseLogOptIntPositive(info, logOptBatchSize, defaultBatchSizeBytes)
 
+  jsonLogger, err := jsonfilelog.New(info)
+  if err != nil {
+    fmt.Printf("jsonLog file err: %s, info: %s", err, info)
+    return nil, errors.Wrapf(err, "error creating json logger from file: %q", file)
+  }
+
   /* https://github.com/containerd/fifo */
   inputFile, err := fifo.OpenFifo(context.Background(), file, syscall.O_RDONLY, fileMode)
   if err != nil {
@@ -209,6 +221,7 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
     sendingInterval: sendingInterval,
     batchSize: batchSize,
     info: info,
+    jsonLogger: jsonLogger,
     tag: tag,
     sourceCategory: sourceCategory,
     sourceName: sourceName,
@@ -217,6 +230,7 @@ func (sumoDriver *sumoDriver) NewSumoLogger(file string, info logger.Info) (*sum
 
   sumoDriver.mu.Lock()
   sumoDriver.loggers[file] = newSumoLogger
+  sumoDriver.indexes[info.ContainerID] = newSumoLogger
   sumoDriver.mu.Unlock()
 
   return newSumoLogger, nil
@@ -228,10 +242,28 @@ func (sumoDriver *sumoDriver) StopLogging(file string) error {
   if exists {
     logrus.Info(fmt.Sprintf("%s: Stopping logging driver for closed container.", pluginName))
     sumoLogger.inputFile.Close()
+    sumoLogger.jsonLogger.Close()
     delete(sumoDriver.loggers, file)
   }
   sumoDriver.mu.Unlock()
   return nil
+}
+
+func (sumoDriver *sumoDriver) ReadLogs(config logger.ReadConfig, info logger.Info) (io.ReadCloser, error) {
+  sumoDriver.mu.Lock()
+  sumoLogger, exists := sumoDriver.indexes[info.ContainerID]
+  sumoDriver.mu.Unlock()
+  if !exists {
+    return nil, fmt.Errorf("container %s doesn't exist", info.ContainerID)
+  }
+  pipeReader, pipeWriter := io.Pipe()
+  logReader, readable := sumoLogger.jsonLogger.(logger.LogReader)
+  if !readable {
+    return nil, fmt.Errorf("error creating json logger for container: %s", info.ContainerID)
+  }
+
+  go sumoLogger.readLogs(logReader, pipeWriter, config)
+  return pipeReader, nil
 }
 
 func interpretAll(re *regexp.Regexp, input string, dictionary map[string]string) string {

@@ -7,6 +7,7 @@ import (
   "io/ioutil"
   "net/url"
   "os"
+  "path/filepath"
   "strconv"
   "testing"
   "time"
@@ -55,6 +56,7 @@ func TestDriversDefaultConfig (t *testing.T) {
     },
     ContainerID: testContainerID,
     ContainerName: testContainerName,
+    LogPath: filepath.Join("/tmp/", "container.log"),
   }
 
   t.Run("NewSumoLogger", func(t *testing.T) {
@@ -173,6 +175,7 @@ func TestDriversLogOpts (t *testing.T) {
       },
       ContainerID: testContainerID,
       ContainerName: testContainerName,
+      LogPath: filepath.Join("/tmp/", "container.log"),
     }
 
     testSumoDriver := newSumoDriver()
@@ -206,6 +209,7 @@ func TestDriversLogOpts (t *testing.T) {
       },
       ContainerID: testContainerID,
       ContainerName: testContainerName,
+      LogPath: filepath.Join("/tmp/", "container.log"),
     }
 
     testTlsConfigNoInsecureSkipVerify := &tls.Config{
@@ -245,6 +249,7 @@ func TestDriversLogOpts (t *testing.T) {
       },
       ContainerID: testContainerID,
       ContainerName: testContainerName,
+      LogPath: filepath.Join("/tmp/", "container.log"),
     }
 
     testSumoDriver := newSumoDriver()
@@ -278,6 +283,7 @@ func TestDriversLogOpts (t *testing.T) {
       },
       ContainerID: testContainerID,
       ContainerName: testContainerName,
+      LogPath: filepath.Join("/tmp/", "container.log"),
     }
 
     testSumoDriver := newSumoDriver()
@@ -311,6 +317,7 @@ func TestDriversLogOpts (t *testing.T) {
       },
       ContainerID: testContainerID,
       ContainerName: testContainerName,
+      LogPath: filepath.Join("/tmp/", "container.log"),
     }
 
     testSumoDriver := newSumoDriver()
@@ -344,6 +351,7 @@ func TestDriversLogOpts (t *testing.T) {
       },
       ContainerID: testContainerID,
       ContainerName: testContainerName,
+      LogPath: filepath.Join("/tmp/", "container.log"),
     }
 
     testSumoDriver := newSumoDriver()
@@ -377,6 +385,7 @@ func TestDriversLogOpts (t *testing.T) {
       },
       ContainerID: testContainerID,
       ContainerName: testContainerName,
+      LogPath: filepath.Join("/tmp/", "container.log"),
     }
 
     testSumoDriver := newSumoDriver()
@@ -410,6 +419,7 @@ func TestDriversLogOpts (t *testing.T) {
       },
       ContainerID: testContainerID,
       ContainerName: testContainerName,
+      LogPath: filepath.Join("/tmp/", "container.log"),
     }
 
     testSumoDriver := newSumoDriver()
@@ -443,6 +453,7 @@ func TestDriversLogOpts (t *testing.T) {
       },
       ContainerID: testContainerID,
       ContainerName: testContainerName,
+      LogPath: filepath.Join("/tmp/", "container.log"),
     }
 
     testSumoDriver := newSumoDriver()
@@ -476,6 +487,7 @@ func TestDriversLogOpts (t *testing.T) {
       },
       ContainerID: testContainerID,
       ContainerName: testContainerName,
+      LogPath: filepath.Join("/tmp/", "container.log"),
     }
 
     testSumoDriver := newSumoDriver()
@@ -509,6 +521,7 @@ func TestDriversLogOpts (t *testing.T) {
       },
       ContainerID: testContainerID,
       ContainerName: testContainerName,
+      LogPath: filepath.Join("/tmp/", "container.log"),
     }
 
     testSumoDriver := newSumoDriver()
@@ -553,6 +566,7 @@ func TestDriversLogOpts (t *testing.T) {
       ContainerImageID: testContainerImageID,
       ContainerImageName: testContainerImageName,
       DaemonName: testDaemonName,
+      LogPath: filepath.Join("/tmp/", "container.log"),
     }
 
     expectedTag := testDaemonName + "/" + testContainerImageName + "/" +

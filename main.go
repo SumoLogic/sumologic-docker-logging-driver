@@ -4,8 +4,10 @@ import (
   "fmt"
   "encoding/json"
   "net/http"
+  "io"
 
   "github.com/docker/docker/daemon/logger"
+  "github.com/docker/docker/pkg/ioutils"
   "github.com/docker/go-plugins-helpers/sdk"
 )
 
@@ -14,6 +16,8 @@ const (
   pluginName = "sumologic"
   startLoggingPath = "/LogDriver.StartLogging"
   stopLoggingPath = "/LogDriver.StopLogging"
+  readLogsPath = "/LogDriver.ReadLogs"
+  capabilitiesPath = "/LogDriver.Capabilities"
 )
 
 func main() {
@@ -38,6 +42,15 @@ type StartLoggingRequest struct {
 
 type StopLoggingRequest struct {
   File string
+}
+
+type ReadLogsRequest struct {
+  Config logger.ReadConfig
+  Info logger.Info
+}
+
+type CapabilitiesResponse struct {
+  Capability logger.Capability
 }
 
 type PluginResponse struct {
@@ -73,6 +86,35 @@ func stopLoggingHandler(sumoDriver SumoDriver) func(w http.ResponseWriter, r *ht
     }
     err := sumoDriver.StopLogging(req.File)
     respond(w, err)
+  }
+}
+
+func readLogsHandler(sumoDriver SumoDriver) func(w http.ResponseWriter, r *http.Request) {
+  return func(w http.ResponseWriter, r *http.Request) {
+    var req ReadLogsRequest
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+      http.Error(w, err.Error(), http.StatusBadRequest)
+      return
+    }
+
+    stream, err := sumoDriver.ReadLogs(req.Config, req.Info)
+    if err != nil {
+      http.Error(w, err.Error(), http.StatusInternalServerError)
+      return
+    }
+    defer stream.Close()
+
+    w.Header().Set("Content-Type", "application/x-json-stream")
+    writeFlusher := ioutils.NewWriteFlusher(w)
+    io.Copy(writeFlusher, stream)
+  }
+}
+
+func capabilitesHandler(sumoDriver SumoDriver) func(w http.ResponseWriter, r *http.Request) {
+  return func(w http.ResponseWriter, r *http.Request) {
+      json.NewEncoder(w).Encode(&CapabilitiesResponse {
+        Capability: logger.Capability{ReadLogs: true},
+      })
   }
 }
 
