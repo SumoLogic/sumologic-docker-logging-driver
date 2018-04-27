@@ -11,6 +11,7 @@ import (
   "net/http"
   "time"
 
+  "github.com/docker/docker/daemon/logger"
   "github.com/docker/docker/api/types/plugins/logdriver"
   protoio "github.com/gogo/protobuf/io"
   "github.com/sirupsen/logrus"
@@ -210,4 +211,38 @@ func (sumoLogger *sumoLogger) writeMessageGzipCompression(writer io.Writer, logs
     return err
   }
   return nil
+}
+
+func (sumoLogger *sumoLogger) readLogs(logReader logger.LogReader, writer *io.PipeWriter, config logger.ReadConfig) error {
+  watcher := logReader.ReadLogs(config)
+  dec := protoio.NewUint32DelimitedWriter(writer, binary.BigEndian)
+  defer dec.Close()
+  defer watcher.Close()
+
+  var log logdriver.LogEntry
+  for {
+    select {
+    case msg, receivable := <-watcher.Msg:
+      if !receivable {
+        writer.Close()
+        return fmt.Errorf("error receiving msg from log watcher mssage channel for log reader %s", logReader)
+      }
+
+      log.Line = msg.Line
+      log.Partial = (msg.PLogMetaData != nil)
+      log.TimeNano = msg.Timestamp.UnixNano()
+      log.Source = msg.Source
+
+      if err := dec.WriteMsg(&log); err != nil {
+        writer.CloseWithError(err)
+        return err
+      }
+    case err := <-watcher.Err:
+      writer.CloseWithError(err)
+      return err
+    }
+
+    log.Reset()
+    return nil
+  }
 }
