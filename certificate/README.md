@@ -1,6 +1,6 @@
 # Overview
 
-Docker released Enterprise Edition 2.0. We have successfully re-certificated our sumo logging driver plugin against this major release.
+Docker released Enterprise Edition 2.0. We have successfully re-certified our Sumo Logging Driver Plugin against this major release.
 
 For more details about the certification process of our docker plugin, please refer to the guide: https://docs.docker.com/docker-store/certify-plugins-logging/
 
