@@ -35,7 +35,7 @@ chmod u+x inspectDockerLoggingPlugin
 ## HTTP Mock Server
 Docker provides the sample `http_api_endpoint` server to configure logging plugin to send log data to it. This sample server emulates a HTTP Endpoint. It supports `POST` and `PUT` to log data, `GET` to retrieve data, and `DELETE` to delete data. More details could be found on this page: https://docs.docker.com/docker-store/certify-plugins-logging/.
 
-The Linux binary of this server could be downloaded directly from this repo.
+The Linux binary of this server could be downloaded from https://drive.google.com/open?id=1hSm2HeVCGwBhLu8iQyxMADcLuEUNT9-L.
 
 Set permissions on `http_api_endpoint` so that it is executable:
 ```
