@@ -1,7 +1,3 @@
-| TLS Deprecation Notice |
-| --- |
-| In keeping with industry standard security best practices, as of May 31, 2018, the Sumo Logic service will only support TLS version 1.2 going forward. Verify that all connections to Sumo Logic endpoints are made from software that supports TLS 1.2. |
-
 - [Overview](#overview)
 - [Set up Sumo logging driver plugin](#set-up-sumo-logging-driver-plugin)
   * [Step 1 Configure Sumo to receive Docker logs](#step-1-configure-sumo-to-receive-docker-logs)
@@ -153,3 +149,7 @@ To cleanly disable and remove the plugin, run:
 $ docker plugin disable sumologic/docker-logging-driver
 $ docker plugin rm sumologic/docker-logging-driver
 ```
+
+### TLS 1.2 Requirement
+
+Sumo Logic only accepts connections from clients using TLS version 1.2 or greater. To utilize the content of this repo, ensure that it's running in an execution environment that is configured to use TLS 1.2 or greater.
