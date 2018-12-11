@@ -9,6 +9,8 @@ import (
   "io/ioutil"
   "math"
   "net/http"
+  "os"
+  "strings"
   "time"
 
   "github.com/docker/docker/api/types/plugins/logdriver"
@@ -57,7 +59,7 @@ func (sumoLogger *sumoLogger) consumeLogsFromFile() {
   var log logdriver.LogEntry
   for {
     if err := dec.ReadMsg(&log); err != nil {
-      if err == io.EOF {
+      if err == io.EOF || err == os.ErrClosed || strings.Contains(err.Error(), "file already closed") {
         sumoLogger.inputFile.Close()
         close(sumoLogger.logQueue)
         return
