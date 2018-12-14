@@ -4,7 +4,7 @@ docker container run --rm --log-driver=store/sumologic/docker-logging-driver:1.0
     --log-opt tag={{.ID}} \
     --log-opt sumo-batch-size=2000000 \
     --log-opt sumo-queue-size=400 \
-    --log-opt sumo-sending-frequency=500ms \
+    --log-opt sumo-sending-interval=2000ms \
     --log-opt sumo-compress=false \
     --volume $(pwd)/quotes.txt:/quotes.txt alpine:latest \
     sh -c 'cat /quotes.txt;sleep 10'

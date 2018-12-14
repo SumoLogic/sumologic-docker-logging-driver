@@ -77,7 +77,7 @@ $ docker run --log-driver=sumologic \
     --log-opt sumo-url=sumo-source-url \
     --log-opt sumo-batch-size=2000000 \
     --log-opt sumo-queue-size=400 \
-    --log-opt sumo-sending-frequency=500ms \
+    --log-opt sumo-sending-interval=2000ms \
     --log-opt sumo-compress=false \
     --log-opt ... \
     your_container
