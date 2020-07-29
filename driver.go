@@ -226,7 +226,7 @@ func (sumoDriver *sumoDriver) StopLogging(file string) error {
   sumoDriver.mu.Lock()
   sumoLogger, exists := sumoDriver.loggers[file]
   if exists {
-    logrus.Info(fmt.Sprintf("%s: Stopping logging driver for closed container.", pluginName))
+    logrus.Debug(fmt.Sprintf("%s: Stopping logging driver for closed container.", pluginName))
     sumoLogger.inputFile.Close()
     delete(sumoDriver.loggers, file)
   }
