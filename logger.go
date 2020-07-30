@@ -127,14 +127,14 @@ func (sumoLogger *sumoLogger) handleBatchedLogs() {
       return
     }
     for {
-      logrus.Info(fmt.Sprintf("%s: Sending logs batch. batch-size: %d bytes",
+      logrus.Debug(fmt.Sprintf("%s: Sending logs batch. batch-size: %d bytes",
         pluginName, logBatch.sizeBytes))
       err := sumoLogger.sendLogs(logBatch.logs)
       if err == nil {
         retryInterval = initialRetryInterval
         break
       }
-      logrus.Info(fmt.Sprintf("%s: Sleeping for %s before retry...",
+      logrus.Debug(fmt.Sprintf("%s: Sleeping for %s before retry...",
         pluginName, retryInterval.String()))
       time.Sleep(retryInterval)
       if retryInterval < maxRetryInterval {
