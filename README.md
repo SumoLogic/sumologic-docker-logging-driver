@@ -37,7 +37,7 @@ In this step you create, on the Sumo service, an HTTP endpoint to receive your D
 
 On each Docker host with containers from which you want to collect container logs, install the plugin by running the following command in a terminal window:
 ```bash
-$ docker plugin install store/sumologic/docker-logging-driver:1.0.3 --alias sumologic --grant-all-permissions
+$ docker plugin install store/sumologic/docker-logging-driver:1.0.4 --alias sumologic --grant-all-permissions
 ```
 
 **NOTE** The `--alias` is required for using it on AWS ECS
