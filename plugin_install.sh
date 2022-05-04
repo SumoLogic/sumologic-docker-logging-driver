@@ -1,6 +1,6 @@
 #!/bin/bash
 
-docker build -t rootfsimage .
+docker build -t rootfsimage --build-arg=GOARCH=amd64 .
 id=$(docker create rootfsimage true)
 rm -rf rootfs
 mkdir rootfs
