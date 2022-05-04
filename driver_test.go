@@ -11,10 +11,10 @@ import (
   "testing"
   "time"
 
+  "github.com/containerd/fifo"
   "github.com/docker/docker/daemon/logger"
   "github.com/sirupsen/logrus"
   "github.com/stretchr/testify/assert"
-  "github.com/tonistiigi/fifo"
   "golang.org/x/sys/unix"
 )
 

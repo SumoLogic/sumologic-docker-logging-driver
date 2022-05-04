@@ -1,13 +1,12 @@
 # From https://github.com/jahkeup/updater53/blob/master/Dockerfile
 ###############################################################################
 
-FROM golang:1.14.6-alpine3.12 as builder
+FROM golang:1.17-alpine as builder
 
 WORKDIR /go/src/github.com/SumoLogic/docker-logging-driver
 COPY . .
 
 ARG GOOS=linux
-ARG GOARCH=amd64
 ARG GOARM=
 
 RUN apk add --no-cache git mercurial \
