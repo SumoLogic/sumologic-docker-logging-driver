@@ -1,12 +1,7 @@
 #!/bin/bash
 
-docker build -t rootfsimage --build-arg=GOARCH=amd64 .
-id=$(docker create rootfsimage true)
-rm -rf rootfs
-mkdir rootfs
-docker export "$id" | tar -x -C rootfs
+source ./plugin_build.sh
 
-docker rm -vf "$id"
-
-docker plugin create sumologic/docker-logging-driver:1.0.2 .
-docker plugin enable sumologic/docker-logging-driver:1.0.2
+for arch in "" "amd64" "arm64"; do
+    build_plugin "install" $arch
+done
