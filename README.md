@@ -46,7 +46,7 @@ $ docker plugin install sumologic/docker-logging-driver:1.0.5-arm64 --alias sumo
 
 **NOTE** The `--alias` is required for using it on AWS ECS
 
-**NOTE** As of version `1.0.5`, the Docker Publisher Center is retired, and as such we host our own images. Please pull from `sumologic/docker-logging-driver` instead of `store/sumologic/docker-logging-driver` moving forward.
+**NOTE** As of version `1.0.5`, the plugin image is only available from the repo `sumologic/docker-logging-driver`. Prior to `1.0.5`, the plugin was also available at `store/sumologic/docker-logging-driver`. However, with the deprecation of the Docker Publisher Center, the `store` repo has been deprecated as well.
 
 To verify that the plugin is installed and enabled, run the following command:
 
