@@ -17,11 +17,11 @@ import (
   "syscall"
   "time"
 
+  "github.com/containerd/fifo"
   "github.com/docker/docker/daemon/logger"
   "github.com/docker/docker/daemon/logger/loggerutils"
   "github.com/pkg/errors"
   "github.com/sirupsen/logrus"
-  "github.com/tonistiigi/fifo"
 )
 
 const (
