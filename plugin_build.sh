@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VERSION="1.0.5"
+VERSION="1.0.6"
 
 build_plugin () {
     ACTION=$1
@@ -22,12 +22,12 @@ build_plugin () {
     docker rm -vf "$id"
 
     cp config.json ./sumoplugin/
-    docker plugin create sumologic/docker-logging-driver:${VERSION_ARCH} ./sumoplugin/
+    docker plugin create ghcr.io/sumologic/docker-logging-driver:${VERSION_ARCH} ./sumoplugin/
 
     if [[ "$ACTION" == "install" ]]; then
-        docker plugin enable sumologic/docker-logging-driver:${VERSION_ARCH}
+        docker plugin enable ghcr.io/sumologic/docker-logging-driver:${VERSION_ARCH}
     elif [[ "$ACTION" == "push" ]]; then
-        docker plugin push sumologic/docker-logging-driver:${VERSION_ARCH}
+        docker plugin push ghcr.io/sumologic/docker-logging-driver:${VERSION_ARCH}
     else
         echo "Invalid action ${ACTION}, must be 'install' or 'push'."
     fi
